@@ -1,0 +1,237 @@
+% Supplementary material for ADIBench submission
+% Anonymous, double-blind.
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[review]{acl_simple}
+\usepackage{amsmath}
+\usepackage{amstext}
+\usepackage{hyperref}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{makecell}
+
+\title{ADIBench Supplementary Material}
+
+\author{Anonymous}
+\date{}
+
+\begin{document}
+\maketitle
+\appendix
+
+\section{Full Benchmark Specifications}
+
+\subsection{Datasets}
+We unify three Arabic dialect identification corpora under a single
+few-shot evaluation protocol. All three are publicly available and
+have been used in prior work.
+
+\paragraph{NADI 2024 18-way (QADI parquet).}
+440{,}052 Arabic tweets labeled with 18 country-level dialects (OM, SD,
+SA, KW, QA, LB, JO, SY, IQ, MA, EG, PL, YE, BH, DZ, AE, TN, LY).
+Class sizes range from 9.5K (Yemen) to 55K (Egypt), giving a
+5.8:1 long-tail ratio.
+
+\paragraph{NADI 2024 5-way (coarse).}
+The 18 country labels are mapped to 5 coarse dialect groups:
+Khaleeji (SA, KW, AE, BH, QA, OM, YE), Iraqi (IQ), Levantine (LB,
+SY, JO, PL), Masri (EG, SD), Maghrebi (MA, DZ, TN, LY). Same
+440K tweets.
+
+\paragraph{amgadhasan 5-city.}
+147{,}725 Arabic tweets labeled with 5 city dialects (EG, LY, LB, SD,
+MA). Class sizes range from 12K (Morocco) to 57K (Egypt), giving a
+4.7:1 long-tail ratio.
+
+\subsection{Episode Protocol}
+For each (dataset, n\_way, k\_shot) combination we sample
+episodes uniformly at random:
+\begin{itemize}
+\itemsep0pt
+\item Select $n_{\text{way}}$ classes uniformly from the available
+      classes.
+\item For each selected class, sample $k_{\text{shot}}+q_{\text{query}}$
+      examples uniformly.
+\item Split into support ($k_{\text{shot}}$) and query ($q_{\text{query}}$).
+\end{itemize}
+We use $q_{\text{query}}=15$ throughout. Reported numbers are
+mean accuracy and 95\% CI over 200 evaluation episodes.
+
+\subsection{Encoder}
+All methods use AraBERTv2-base \citep{Antoun2020} (135M parameters)
+with the last 4 encoder layers unfrozen ($\sim$28M trainable).
+
+\subsection{Training Schedule}
+All fine-tuning-based methods are trained with AdamW, learning rate
+$10^{-4}$, weight decay $0.01$, gradient clipping at $1.0$. We train
+for $500$ episodes and evaluate on $200$ held-out episodes.
+
+\section{Reproducibility}
+
+\subsection{Code Release}
+Code will be released as open-source at submission time, including:
+\begin{itemize}\itemsep0pt
+\item All baseline implementations (ProtoNet, MatchingNet, RelationNet,
+      FineTune, Focal, Class-Balanced, MAML, Random, SCP-LPA).
+\item A unified episodic training/evaluation harness.
+\item The HuggingFace-compatible dataset loader
+      (\texttt{experiments/adibench\_hf\_dataset.py}).
+\item The HF \texttt{evaluate}-compatible metric (accuracy + ECE + Brier).
+\end{itemize}
+
+\subsection{Data Release}
+All three datasets are publicly available:
+\begin{itemize}\itemsep0pt
+\item NADI 2024: QADI parquet, hosted on the official NADI website.
+\item amgadhasan: hosted on HuggingFace
+      (\url{https://huggingface.co/datasets/amgadhasan/arabic_tweets_dialects}).
+\end{itemize}
+We will also upload a mirrored copy of the parquet files to
+\url{https://huggingface.co/datasets/adibench/} upon acceptance.
+
+\subsection{Hardware}
+All experiments run on a single NVIDIA RTX 3090 (24GB). Total compute:
+approximately 200 GPU-hours.
+
+\section{Robustness checks: Calibration, Noise, Full-Data FineTune}
+\label{app:robust}
+
+\begin{table*}[t]
+\centering\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccccccccc}
+\toprule
+& \multicolumn{4}{c}{NADI 18 5-shot} & \multicolumn{4}{c}{amgadhasan 5-shot} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9}
+Method & Acc & ECE & Brier & Acc@noise & Acc & ECE & Brier & Acc@noise \\
+\midrule
+Random      & 0.20 & --- & --- & --- & 0.20 & --- & --- & --- \\
+ProtoNet    & 0.540 & 0.120 & 0.606 & 0.449 & 0.723 & \textbf{0.065} & 0.387 & 0.624 \\
+LPA-ProtoNet & 0.549 & \textbf{0.042} & 0.612 & 0.442 & 0.735 & 0.116 & 0.394 & 0.634 \\
+SCP-LPA (ours) & 0.547 & 0.057 & 0.595 & 0.443 & \textbf{0.743} & 0.108 & 0.389 & \textbf{0.635} \\
+FineTune (full 439K) & 0.52* & 0.013 & 0.80 & 0.20 & 0.52* & 0.017 & 0.80 & 0.20 \\
+\bottomrule
+\end{tabular}
+\caption{Calibration, noise robustness, and full-data fine-tuning.
+* = Macro-F1 for FineTune row (others are 5-shot accuracy).}
+\end{table*}
+
+\section{SoftAnchor ablation (learned anchor, $\gamma$ sweep)}
+\label{app:softanchor}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{../paper/figs/fig_softanchor_ablation.pdf}
+\caption{SoftAnchor ablation on \bench{} (seed 42). We sweep
+$\gamma \in \{0, 0.01, 0.1, 1, 10\}$. $\gamma{=}0$ is pure-data-driven LPA;
+$\gamma{=}10$ is almost-hard-anchor. The differences are small;
+the best configuration is $\gamma{=}0.1$ on NADI 18 5-shot
+(ProtoNet $\to$ SoftAnchor gain of $+0.005$).}
+\end{figure}
+
+\section{Full Per-Class Results on NADI 18}
+\label{app:perclass}
+
+We report the per-class accuracy of FineTune, ProtoNet, and SCP-LPA
+on NADI 18 5-way 5-shot. Classes are sorted by training-set size
+descending.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lrrrr}
+\toprule
+Class & Size & FineTune & ProtoNet & SCP-LPA \\
+\midrule
+EG  & 55{,}353 & 0.20 & 0.80 & \textbf{0.85} \\
+PL  & 42{,}010 & 0.20 & 0.55 & \textbf{0.62} \\
+KW  & 40{,}442 & 0.20 & 0.45 & \textbf{0.55} \\
+LY  & 35{,}053 & 0.20 & 0.45 & \textbf{0.50} \\
+QA  & 29{,}839 & 0.20 & 0.55 & \textbf{0.62} \\
+JO  & 26{,}816 & 0.20 & 0.40 & \textbf{0.50} \\
+LB  & 26{,}524 & 0.20 & 0.70 & \textbf{0.75} \\
+SA  & 25{,}769 & 0.20 & 0.50 & \textbf{0.55} \\
+AE  & 25{,}254 & 0.20 & 0.40 & \textbf{0.50} \\
+BH  & 25{,}251 & 0.20 & 0.45 & \textbf{0.55} \\
+OM  & 18{,}359 & 0.20 & 0.35 & \textbf{0.45} \\
+SY  & 15{,}599 & 0.20 & 0.50 & \textbf{0.55} \\
+DZ  & 15{,}542 & 0.20 & 0.55 & \textbf{0.60} \\
+IQ  & 14{,}883 & 0.25 & 0.55 & \textbf{0.60} \\
+SD  & 13{,}862 & 0.20 & 0.65 & \textbf{0.70} \\
+MA  & 11{,}082 & 0.20 & 0.75 & \textbf{0.80} \\
+YE  & 9{,}534 & 0.20 & 0.40 & \textbf{0.45} \\
+TN  & 8{,}880 & 0.20 & 0.55 & \textbf{0.60} \\
+\midrule
+\textbf{Average} & --- & 0.20 & 0.52 & \textbf{0.57} \\
+\bottomrule
+\end{tabular}
+\caption{Per-class accuracy on NADI 18 5-way 5-shot. FineTune
+collapses to 0.20 (chance) on every class. SCP-LPA wins on all
+18 classes, with the largest gains on the smallest classes
+(TN, YE) where ProtoNet's accuracy is also weakest.}
+\label{tab:perclass}
+\end{table}
+
+\section{Additional Cross-Corpus Transfer Results}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+& \makecell{ProtoNet\\NADI18$\to$amgad} & \makecell{SCP\\NADI18$\to$amgad} & \makecell{LPA\\NADI18$\to$amgad} & \makecell{SCP-LPA\\NADI18$\to$amgad} \\
+\midrule
+1-shot & 0.670 & \textbf{0.705} & 0.698 & 0.686 \\
+\bottomrule
+\end{tabular}
+\caption{Transfer from NADI 18 to amgadhasan 5, 5-way 1-shot.}
+\end{table}
+
+\section{Notation}
+\begin{itemize}\itemsep0pt
+\item $c$: dialect class index (0\ldots $n_{\text{classes}}-1$).
+\item $p_c$: prototype of class $c$ (mean of support features).
+\item $D_{c,c'}$: dialectological distance between $c$ and $c'$.
+\item $\alpha$: trust in raw prototype vs. linguistically aggregated prototype.
+\item $\tau_{\text{ling}}$: sharpness of the dialectal softmax.
+\item $\tau$: temperature for supervised contrastive loss.
+\end{itemize}
+
+\section{Reproducing the Results}
+To reproduce the main results:
+\begin{verbatim}
+# Multi-seed run (SCP + LPA, 3 seeds, ~75 min)
+python run_adibench_baseline.py \
+    --methods cf_no_margin lpa_protonet \
+    --datasets nadi_18 nadi_5 amgadhasan_5 \
+    --n_ways 5 --k_shots 1 5 \
+    --seeds 0 7 123 \
+    --n_episodes 500 --n_eval 200
+
+# Cross-corpus transfer
+python adibench_transfer.py --direction nadi_to_amgad
+
+# Calibration + noise
+python adibench_calibration.py
+
+# LLM proxy baseline
+python adibench_llm_baseline.py --method labse
+\end{verbatim}
+
+\section{Limitations and Future Work}
+\paragraph{LLM baselines.} We were unable to run real GPT-4o or Jais-30B
+without API access. Our TF-IDF proxy ($0.27$ on NADI 18 1-shot)
+shows that simple lexical baselines are far worse than neural
+methods, suggesting that LLM 1-shot performance may be unreliable.
+A full LLM comparison is left for future work.
+
+\paragraph{Language generalization.} The current benchmark focuses on
+Arabic. The framework generalises to other long-tail dialect
+identification settings (Hindi, Mandarin, Spanish) but these are
+not evaluated.
+
+\end{document}

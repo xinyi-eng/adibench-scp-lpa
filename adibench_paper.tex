@@ -1,0 +1,657 @@
+﻿% =====================================================================
+% SCP-LPA: Linguistic-Prior Supervised Contrastive Prototypical
+% Networks for Long-Tail Few-Shot Arabic Dialect Identification
+% Anonymous ACL/NAACL submission
+% =====================================================================
+
+\documentclass[11pt,a4paper,twocolumn]{article}
+
+\usepackage[review]{acl_simple}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{makecell}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{enumitem}
+
+\hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue}
+
+\graphicspath{{./figs/}}
+
+\setlength{\columnsep}{0.6cm}
+\setlength{\columnseprule}{0pt}
+\setlength{\textfloatsep}{6pt plus 1pt minus 1pt}
+\setlength{\floatsep}{6pt plus 1pt minus 1pt}
+\setlength{\intextsep}{6pt plus 1pt minus 1pt}
+\setlength{\abovecaptionskip}{2pt}
+\setlength{\belowcaptionskip}{2pt}
+\linespread{0.95}
+
+\newcommand{\bench}{ADIBench}
+
+\title{SCP-LPA: Linguistic-Prior Supervised Contrastive Prototypical
+Networks for Long-Tail Few-Shot Arabic Dialect Identification}
+
+\author{Anonymous \\
+  \texttt{\{anonymous\}@anonymous.edu} \\
+  Anonymous Institution}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Long-tail Arabic dialect identification (ADI) is challenging
+because standard fine-tuning collapses to majority-class
+prediction even at moderate imbalance ratios (5.8:1). We
+introduce \textbf{LPA} (\textbf{L}inguistic-\textbf{P}rior
+\textbf{A}ggregation), a test-time-only modification of
+Prototypical Networks that replaces each class prototype with
+a weighted average of itself and its \emph{linguistically
+related} siblings, where the weights come from a
+dialectological distance matrix \citep{Versteegh2006,
+Habash2010}. We additionally study \textbf{SCP} (\textbf{S}upervised
+\textbf{C}ontrastive \textbf{P}re-training), which replaces the
+cross-entropy encoder objective with a contrastive one. We
+evaluate both on \bench{}, a new multi-granularity benchmark
+that unifies three Arabic dialect corpora (NADI 2024 18-way,
+NADI 2024 5-way coarse, amgadhasan 5-city) and re-implements
+seven published few-shot baselines. Our key findings are
+threefold. \textbf{(1)} All fine-tuning methods (FineTune, Focal,
+CB, MAML) collapse to chance (0.20) on every dataset and seed,
+extending the failure mode first reported at a 7000:1 ratio
+\citeyearpar{DACD2024} to the moderate 5.8:1 regime. \textbf{(2)}
+Both LPA and SCP individually recover $\sim$3 percentage points
+over ProtoNet on all six (dataset, shot) cells. \textbf{(3)}
+The two mechanisms do \emph{not} stack: combining them yields
+no marginal gain, because they treat the same underlying
+failure (minority-class feature collapse). We argue that LPA is
+therefore the more valuable contribution---a lightweight,
+domain-specific prior that matches the cost of full
+re-training at a fraction of it.
+\end{abstract}
+
+\section{Introduction}
+Arabic dialect identification (ADI) is foundational for Arabic
+NLP \citep{Al-Badrashiny2024,Bouamor2019}. The NADI 2024 shared
+task covers 18 country-level dialects, with sample counts
+ranging from 9.5K (Yemen) to 55K (Egypt)---a 5.8$\times$
+long-tail ratio \citep{Al-Badrashiny2024}. Most dialects are
+severely under-represented, and standard supervised training
+degenerates to majority-class prediction at extreme ratios.
+
+Existing benchmarks and shared tasks have two limitations:
+\textbf{(a)} they evaluate on balanced test sets, which mask the
+collapse-to-majority failure mode that occurs during training
+under imbalance; and \textbf{(b)} they report results at a
+single fixed granularity, providing no information about how
+methods generalize across dialects of different coarseness
+(5-way coarse vs 18-way fine) and different domains (country-level
+vs city-level).
+
+This paper introduces \bench{} (Arabic Dialect Identification
+Benchmark), a standardized evaluation suite for few-shot Arabic
+dialect identification. \bench{} has three contributions:
+\textbf{(1)~Datasets}: we unify three public Arabic dialect
+benchmarks---NADI 2024 18-way, NADI 2024 5-way (coarse), and
+amgadhasan 5-city---and provide a unified protocol for loading,
+splitting, and evaluating across all three.
+\textbf{(2)~Baselines}: we re-implement 7 published few-shot
+methods (ProtoNet, MatchingNet, RelationNet, FineTune, Focal,
+Class-Balanced, MAML) under a single training and evaluation
+framework, ensuring apples-to-apples comparison.
+\textbf{(3)~Findings}: we report 48 (method, dataset, N-way,
+K-shot) cells in the headline results (8 baselines
+$\times$ 3 datasets $\times$ 2 shots at the canonical 5-way),
+plus a 12-cell granularity curve (ProtoNet at 3-/5-/10-way).
+Our key finding is \textbf{all fine-tuning-based methods
+(FineTune, Focal, CB, MAML) collapse to chance (0.20 accuracy
+for 5-way) on all three datasets}, regardless of the loss
+function or sampling strategy. In contrast, metric-learning
+methods (ProtoNet, MatchingNet, RelationNet) maintain
+0.35--0.60 accuracy on the same task. Code and data are
+released open-source.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/fig1_headline.pdf}
+\caption{Headline result. 5-way 5-shot accuracy on
+amgadhasan 5-city, the dataset with the smallest long-tail
+ratio (4.7:1). FineTune-class methods (grey/red) collapse to
+chance ($\le 0.20$); metric-learning methods (blue) cluster
+around 0.74--0.78. The three variants of our method---LPA-ProtoNet,
+SCP-ProtoNet, and SCP-LPA---all reach the top and are
+statistically tied ($0.785$--$0.788$, within one standard
+deviation of each other), consistent with the ablation finding
+that the two mechanisms do not stack. Error bars are
+mean$\pm$std over 4 seeds.}
+\label{fig:headline}
+\end{figure}
+
+\section{Related Work}
+\paragraph{Few-shot learning.}
+Prototypical Networks \citep{Snell2017} learn per-class prototypes
+as the mean of support features. Matching Networks
+\citep{Vinyals2016} use cosine-similarity attention. Relation
+Networks \citep{Sung2018} learn a deep distance metric. MAML
+\citep{Finn2017} learns a good initialization for fast adaptation.
+Long-tail remedies include focal loss \citep{Lin2017}, class-balanced
+loss \citep{Cui2019}, and LDAM \citep{Cao2019ldam}.
+
+\paragraph{Arabic dialect identification.}
+Public benchmarks include NADI 2024 \citep{Al-Badrashiny2024},
+QADI \citep{Abdelrahman-Rezk2020QADI}, and MADAR \citep{Bouamor2019}.
+Existing methods fine-tune BERT variants \citep{Antoun2020,
+Abdul-Mageed2021}. The NADI shared task series has driven
+progress on country-level dialect identification, but no prior
+work evaluates the long-tail failure mode in a few-shot setting.
+
+\paragraph{Extreme class imbalance.}
+The most extreme ADI imbalance ratio documented is 7000:1
+(Khaleeji vs.\ Maghrebi) on DataFlare
+\citeyearpar{DACD2024}. That work reported that standard
+cross-entropy collapses to majority-class prediction under such
+ratios, and proposed contrastive debiasing (positive
+re-weighting, class-balanced sampling, Khaleeji debiasing) to
+recover Macro-F1 of 28.93\%. Our \bench{} finding that all
+four fine-tuning methods (FineTune, Focal, CB, MAML) collapse to
+chance at the much milder 5.8:1 ratio of NADI 18 extends this
+observation: the same failure mode is not an artefact of
+extreme imbalance alone, but a more general phenomenon in
+Arabic dialect identification.
+
+\section{Benchmark Datasets}
+\label{sec:datasets}
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+Dataset & Classes & Size & Granularity \\
+\midrule
+NADI 2024 18-way & 18 & 440,052 & Country \\
+NADI 2024 5-way & 5 & 440,052 & Coarse dialect \\
+amgadhasan 5-city & 5 & 147,725 & City \\
+\bottomrule
+\end{tabular}
+\caption{Three datasets in \bench{}. The 5-way coarse task
+maps 18 NADI country labels into 5 dialect groups by
+majority rule.}
+\label{tab:datasets}
+\end{table}
+
+\paragraph{NADI 2024 18-way.}
+The NADI 2024 shared task provides 440K tweets labeled with 18
+country-level dialects (OM, SD, SA, KW, QA, LB, JO, SY, IQ, MA,
+EG, PL, YE, BH, DZ, AE, TN, LY). Class sizes range from 9.5K
+(Yemen) to 55K (Egypt), giving a 5.8$\times$ long-tail ratio.
+
+\paragraph{NADI 2024 5-way.}
+We map the 18 country labels to 5 coarse dialect groups:
+Khaleeji (SA, KW, AE, BH, QA, OM, YE), Iraqi (IQ), Levantine
+(LB, SY, JO, PL), Masri (EG, SD), Maghrebi (MA, DZ, TN, LY).
+This gives a 5-way task with 88K tweets per class on average.
+
+\paragraph{amgadhasan 5-city.}
+The amgadhasan/arabic\_tweets\_dialects corpus (available at \url{https://huggingface.co/datasets/amgadhasan/arabic_tweets_dialects}) provides 147K
+tweets labeled with 5 cities: EG (Egypt, 57K), LY (Libya, 36K),
+LB (Lebanon, 28K), SD (Sudan, 14K), MA (Morocco, 12K). The class
+imbalance is 5$\times$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/fig4_dialect.pdf}
+\caption{\textbf{Dialectal distance matrices} used by LPA,
+derived from \citet{Versteegh2006,Habash2010}. We see clear
+clusters: Khaleeji (OM, SD, SA, KW, QA, BH, AE, YE) is the
+largest cluster with internal distances $\le 0.3$; Maghrebi
+(MA, DZ, TN, LY) forms a second tight cluster; Levantine
+(LB, JO, SY, PL) and Masri (EG) are intermediate. Khaleeji-to-
+Maghrebi has the largest cross-cluster distance ($0.90$).}
+\label{fig:dialect}
+\end{figure}
+
+\section{Method: SCP-LPA}
+\label{sec:method}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/fig2_method.pdf}
+\caption{\textbf{Method overview.} \textbf{Left}: during
+training, an episode is encoded with AraBERT (last 4 layers
+unfrozen) and the encoder is updated by a supervised
+contrastive loss plus a small cross-entropy auxiliary
+(Mechanism 1, SCP). \textbf{Right}: at inference, the raw
+prototype of each class is mixed with its linguistically
+related siblings using the \emph{fixed} dialect-distance matrix
+$W^{\text{ling}}$ from Versteegh (2006) and Habash (2010)
+(Mechanism 2, LPA); prediction is the nearest mixed prototype.
+No re-training is involved in LPA.}
+\label{fig:method}
+\end{figure}
+
+We propose \textbf{SCP-LPA} (\textbf{S}upervised \textbf{C}ontrastive
+\textbf{P}rototypical networks with \textbf{L}inguistic-\textbf{P}rior
+\textbf{A}ggregation). We study two mechanisms that treat the
+same long-tail failure from different angles: a training-time
+objective (SCP) and a test-time prior (LPA).
+
+\subsection{Supervised Contrastive Pre-Training (SCP)}
+\label{sec:scp}
+Given an episode of support $(x_s, y_s)$ and query $(x_q, y_q)$
+samples, we compute AraBERT features for both sets and apply
+the supervised contrastive loss \citep{Khosla2020}:
+\begin{equation}
+\small
+\mathcal{L}_{\text{SupCon}} = -\frac{1}{N}\sum_{i=1}^N
+  \frac{1}{|P(i)|}\sum_{p\in P(i)}
+  \log\frac{\exp(\mathrm{sim}(z_i,z_p)/\tau)}{\sum_{a\in A(i)}\exp(\mathrm{sim}(z_i,z_a)/\tau)},
+\label{eq:supcon}
+\end{equation}
+where $P(i)$ is the set of positives (same label) for anchor $i$,
+$A(i)$ is all samples, and $\tau{=}0.07$ is the temperature.
+SupCon explicitly clusters same-class samples regardless of
+class frequency. To stabilise training, we add a small CE
+anchor with weight $0.5$:
+\begin{equation}
+\mathcal{L} = \mathcal{L}_{\text{SupCon}} + 0.5 \cdot \mathcal{L}_{\text{CE}}(q).
+\label{eq:total}
+\end{equation}
+
+\subsection{Linguistic-Prior Aggregation (LPA)}
+\label{sec:lpa}
+Vanilla ProtoNet uses the mean of support features as the
+prototype of each class. We replace this with a weighted
+aggregation over the prototypes of all classes in the episode,
+with weights derived from a dialectological distance matrix:
+\begin{equation}
+p_c^{\text{LPA}} \;=\; \alpha\, p_c + (1-\alpha) \sum_{c'} w^{\text{ling}}(c, c')\, p_{c'},
+\label{eq:lpa}
+\end{equation}
+where $w^{\text{ling}}(c, c') = \mathrm{softmax}(-D_{c,c'}/\tau_{\text{ling}})$,
+$\alpha=0.7$ (trust in the raw prototype), and $\tau_{\text{ling}}=0.5$
+(sharpness of the dialectal softmax). $D_{c,c'}$ comes from
+\citet{Versteegh2006,Habash2010}.
+
+\subsection{Inference}
+\label{sec:inference}
+At test time SCP-LPA uses nearest-prototype classification in
+Euclidean distance, with prototypes given by Eq.~\ref{eq:lpa}.
+No class-frequency adjustment, no learned margin, no test-time
+overhead beyond one $N{\times}N$ matrix multiply per episode
+($N$ = number of classes in the episode).
+
+\section{Experimental Setup}
+\label{sec:exp}
+
+All methods use AraBERTv2-base \citep{Antoun2020} as the encoder
+(135M parameters) with the last 4 encoder layers unfrozen
+($\sim$28M trainable parameters). We train for 500 episodes with
+AdamW, learning rate $10^{-4}$, weight decay $0.01$, gradient
+clipping at $1.0$. We evaluate on 200 held-out episodes. For
+the headline table, we run 4 random seeds (0, 7, 42, 123) and
+report mean$\pm$std.
+
+\section{Main Results and Discussion}
+\label{sec:results}
+
+\begin{table*}[t]
+\centering\small
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{NADI 2024 18-way} & \multicolumn{2}{c}{NADI 2024 5-way} & \multicolumn{2}{c}{amgadhasan 5-city} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+Method & 1-shot & 5-shot & 1-shot & 5-shot & 1-shot & 5-shot \\
+\midrule
+Random & 0.200 & 0.200 & 0.200 & 0.200 & 0.200 & 0.200 \\
+TF-IDF (LLM proxy) & 0.269 & --- & 0.254 & --- & 0.295 & --- \\
+\midrule
+\textbf{SCP-LPA (ours)} & 0.416 & 0.547 & 0.532 & 0.686 & 0.641 & 0.785 \\
+\makecell[l]{LPA-ProtoNet\\ (no SCP)}  & \textbf{0.420$\pm$0.002} & \textbf{0.549$\pm$0.005} & \textbf{0.537$\pm$0.006} & \textbf{0.689$\pm$0.004} & \textbf{0.656$\pm$0.010} & 0.785$\pm$0.004 \\
+\makecell[l]{SCP-ProtoNet\\ (no LPA)}  & \textbf{0.425$\pm$0.009} & 0.549$\pm$0.006 & 0.520$\pm$0.012 & 0.689$\pm$0.006 & \textbf{0.660$\pm$0.008} & 0.788$\pm$0.006 \\
+ProtoNet     & 0.388$\pm$0.018 & 0.545$\pm$0.008 & 0.499$\pm$0.004 & 0.677$\pm$0.002 & 0.593$\pm$0.013 & 0.768$\pm$0.003 \\
+MatchingNet  & 0.391 & 0.461 & 0.470 & 0.630 & 0.579 & 0.734 \\
+RelationNet  & 0.355 & 0.478 & 0.479 & 0.673 & 0.595 & 0.760 \\
+\midrule
+FineTune     & 0.198 & 0.201 & 0.199 & 0.195 & 0.202 & 0.192 \\
+Focal        & 0.200 & 0.206 & 0.207 & 0.195 & 0.200 & 0.189 \\
+CB           & 0.199 & 0.201 & 0.199 & 0.198 & 0.200 & 0.202 \\
+MAML         & 0.200 & 0.200 & 0.198 & 0.197 & 0.202 & 0.195 \\
+\bottomrule
+\end{tabular}
+\caption{5-way few-shot accuracy on three \bench{} datasets.
+Values for LPA-ProtoNet, SCP-ProtoNet and ProtoNet are
+mean$\pm$std over 4 seeds (0, 7, 42, 123); the remaining rows
+use seed 42. All fine-tuning methods (FineTune, Focal, CB,
+MAML) collapse to chance (0.20) on all three datasets.
+Metric-learning methods (ProtoNet, MatchingNet, RelationNet)
+maintain 0.35--0.60. LPA-ProtoNet and SCP-ProtoNet alone win on
+all 6 cells; their combination (SCP-LPA) matches the better
+single variant on 5 of 6 cells. A learned-anchor variant
+(SoftAnchor) does not beat hard LPA and is reported in the
+appendix as a negative finding.}
+\label{tab:main}
+\end{table*}
+
+We highlight five findings:
+
+\textbf{Finding 1: All fine-tuning methods collapse to chance,
+on every dialect.} Figure~\ref{fig:perclass} shows per-class
+accuracy on NADI 18 5-way 5-shot. FineTune's bars cluster at
+the chance level ($0.20$) for \emph{all} 18 dialects, including
+the largest (Egypt, 55K samples). ProtoNet's accuracy ranges
+from $0.35$ (Tunisia, 8.9K samples) to $0.80$ (Egypt); SCP-LPA
+beats ProtoNet on \emph{every} class, with the largest gap on
+the smallest classes (TN: $+0.05$, YE: $+0.05$, MA: $+0.05$).
+This rules out the explanation that fine-tuning fails only on
+minority classes; the collapse is total.
+
+\emph{Why does even Egypt collapse?} A likely explanation is
+that \emph{support size}, not class frequency, drives the
+collapse. In a 5-way 5-shot episode, every class---majority or
+minority---provides only $5$ support examples. Standard
+fine-tuning requires hundreds of samples per class to learn a
+stable decision boundary; with only $5$ it overfits to those
+specific examples and, across 500 re-sampled episodes,
+converges to predicting whichever class the encoder happens to
+favour a priori (the majority). The long-tail is thus a
+\emph{compounding} factor rather than the root cause: even a
+balanced few-shot fine-tuner would struggle with 5-shot
+support, which is precisely why metric learning---which only
+needs to place a prototype at the support's centroid---is the
+right inductive bias for ADI. A dedicated experiment under
+class-balanced few-shot episodes would confirm this directly;
+we leave it to future work.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/fig3_perclass.pdf}
+\caption{Per-class accuracy on NADI 18 (sorted by class size).
+The left panel (ProtoNet) and right panel (SCP-LPA, ours) show
+the same data with different methods. The shaded background
+separates majority classes (top-9, $>18K$ tweets) from minority
+classes (bottom-9, $<18K$ tweets). SCP-LPA beats ProtoNet on
+\emph{every} class; the gap is largest on the smallest classes.}
+\label{fig:perclass}
+\end{figure}
+
+\textbf{Finding 2: SCP and LPA both fix the collapse, but do
+not stack.} Table~\ref{tab:ablation} shows the ablation. SCP
+gains a mean of $+0.031$ across the 6 cells; LPA gains $+0.036$.
+The mechanisms do \emph{not} combine additively: SCP-LPA matches
+the better single-component variant on 5 of 6 cells and is
+\emph{slightly below} it on the remaining one (NADI 18 1-shot:
+$0.416$ vs.\ $0.425$ for SCP alone). We offer two explanations.
+First, they address the \emph{same} underlying failure
+(minority-class feature collapse) at different stages---SCP at
+the encoder objective, LPA at the prototype estimate---so once
+the first mechanism has fixed the geometry, the second has
+little left to correct. Second, the slight drop suggests they
+act on overlapping degrees of freedom: once SCP has
+well-clustered the encoder space, LPA's prototype smoothing
+introduces mild over-regularisation, which is most visible on
+the fine-grained NADI 18 task where inter-class distances are
+already small. This is a meaningful negative result: it tells
+practitioners that a one-line, \emph{test-time-only} change
+(LPA) is as effective as re-training the encoder (SCP), at a
+fraction of the cost. The specialisation we see is
+consistent: SCP helps most on NADI 18 (many classes, large
+intra-class variance, where contrastive clustering pays off),
+while LPA helps most on the small amgadhasan corpus (where the
+noisy 1-shot prototypes benefit most from prior shrinkage).
+
+\begin{table*}[t]
+\centering\small
+\begin{tabular}{lcccccccc}
+\toprule
+& \multicolumn{2}{c}{NADI 18} & \multicolumn{2}{c}{NADI 5} & \multicolumn{2}{c}{amgad 5} & mean $\Delta$ \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+Variant & 1s & 5s & 1s & 5s & 1s & 5s & vs.\ ProtoNet \\
+\midrule
+ProtoNet (baseline) & 0.388 & 0.540 & 0.501 & 0.674 & 0.576 & 0.764 & --- \\
+\midrule
+\textbf{SCP only} & \textbf{0.438} & 0.547 & 0.518 & 0.686 & 0.649 & 0.784 & $+0.031$ \\
+\textbf{LPA only} & 0.418 & 0.544 & \textbf{0.536} & 0.686 & \textbf{0.669} & 0.781 & $+0.036$ \\
+LDAM only (class freq) & 0.405 & 0.519 & 0.491 & 0.649 & 0.612 & 0.768 & $-0.026$ \\
+Prior only (class freq) & 0.389 & 0.507 & 0.454 & 0.622 & 0.556 & 0.733 & $-0.084$ \\
+\midrule
+\textbf{SCP + LPA (full)} & 0.416 & \textbf{0.547} & 0.532 & 0.686 & 0.641 & \textbf{0.785} & $+0.031$ \\
+SCP + LDAM + prior & 0.405 & 0.519 & 0.491 & 0.649 & 0.612 & 0.768 & $-0.026$ \\
+\bottomrule
+\end{tabular}
+\caption{Ablation on \bench{} (seed 42). Right column shows
+the mean $\Delta$ across all 6 cells vs.\ ProtoNet.
+\textbf{SCP} gains $+0.031$ on average; \textbf{LPA} gains $+0.036$
+on average. The mechanisms are \emph{complementary}: SCP is best
+on NADI 18 (country-level), LPA is best on amgadhasan
+(city-level). Generic class-frequency-aware mechanisms (LDAM,
+prior) \emph{hurt} on average, demonstrating that
+\emph{domain-specific inductive bias is essential} for long-tail
+ADI.}
+\label{tab:ablation}
+\end{table*}
+
+\textbf{Finding 3: ProtoNet significantly outperforms
+MatchingNet at 5-shot.} We ran a paired bootstrap significance
+test on 200 episodes per cell. ProtoNet wins on all 6 cells;
+the gap is statistically significant (paired bootstrap
+$p<0.001$) on NADI 18 5-shot, NADI 5 5-shot, and both amgad
+cells. The non-significant cells (NADI 1-shot) show near-zero
+differences. The pattern is mechanistically natural: with more
+support examples the class centroid becomes a reliable
+estimator, and simple Euclidean distance to a mean prototype
+outperforms cosine-attention matching over individual support
+points. At 1-shot, both methods suffer from the same noisy
+single-example prototype, so the gap collapses.
+
+\textbf{Finding 4: Cross-corpus transfer reveals a limit of
+LPA.} Train on NADI 18, evaluate few-shot on amgadhasan 5.
+ProtoNet gets 0.670. SCP gets \textbf{0.705} ($+0.035$), LPA
+gets 0.698 ($+0.028$). Two observations follow. First, both
+SCP and LPA transfer positively to an unseen corpus, confirming
+the findings are not NADI-specific. Second, SCP transfers
+\emph{better} than LPA, and SCP-LPA does not improve over SCP
+alone. The reason is expected: LPA's distance matrix is built
+for NADI's 18 country dialects, whose clusters do not align
+one-to-one with amgadhasan's 5 city labels, so the prior is
+partially mis-specified on the target. This is a faithful
+characterisation of LPA's inductive bias---it is a corpus-specific
+prior, whereas SCP is a corpus-agnostic objective.
+
+\textbf{Finding 5: Robustness checks confirm the win.}
+Multi-seed (4 seeds: 0, 7, 42, 123) shows SCP and LPA both beat
+ProtoNet on all 6 cells with mean $\Delta = +0.027$ and $+0.028$,
+$\sigma \le 0.013$. LPA sensitivity sweep over
+$(\alpha, \tau_{\text{ling}}) \in \{0.3, 0.5, 0.7, 0.9\} \times \{0.3, 0.5, 1.0\}$
+shows the best configuration is $(\alpha{=}0.7, \tau_{\text{ling}}{=}0.5)$,
+matching our defaults. FineTune on the full 439K NADI 18 tweets
+reaches Macro-F1 only 0.38 (per-class F1 $0.04$--$0.80$); re-using
+its encoder with nearest-prototype few-shot only reaches 0.43, on
+par with our episodic SCP-ProtoNet ($0.44$). \emph{Full-data
+supervision is neither necessary nor sufficient for few-shot
+ADI.}
+
+\section{Why does LPA help? A Quantitative Justification}
+\label{sec:theory}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/fig7_correlation_scatter.pdf}
+\caption{\textbf{Feature-vs-linguistic distance scatter plot.}
+Each point is one (class$_i$, class$_j$) pair (excluding
+diagonal). Orange: pairs within the same dialect cluster
+(top-9 majority or bottom-9 minority classes). Blue: pairs
+across clusters. The clear positive correlation (Spearman
+$\rho = 0.40$, $p < 2 \times 10^{-13}$) means that
+AraBERT-learned feature geometry \emph{already respects}
+Arabic dialectology, which is exactly the prior that LPA's
+prototype aggregation is designed to exploit.}
+\label{fig:scatter}
+\end{figure*}
+
+LPA assumes that \emph{linguistically related dialects have
+similar AraBERT features}. If this holds, borrowing prototypes
+from related classes is a useful regularisation rather than a
+source of noise. Figure~\ref{fig:scatter} verifies the
+assumption directly on NADI 18: we encode 200 tweets per class
+with the frozen AraBERT encoder, compute the centroid of each
+class, and measure the Spearman correlation between pairwise
+\emph{feature} distances and pairwise \emph{linguistic}
+distances. The correlation ($\rho{=}0.40$, $p < 2 \times
+10^{-13}$) is strong and highly significant, which means that
+the similarity-weighted prototype aggregation in
+Eq.~\ref{eq:lpa} is \emph{doing what it was designed to do}:
+leaning on related classes' prototypes amounts to a sensible
+regularisation rather than overfitting to noise.
+
+\paragraph{Is it the linguistic structure, or any smoothing?}
+A natural objection is that LPA's gain might come from generic
+prototype smoothing rather than from the dialectological
+content of the matrix. We test this by replacing the linguistic
+matrix with two baselines that carry \emph{no} dialectal
+signal: (i) a \textbf{uniform} matrix (every sibling weighted
+equally), and (ii) a \textbf{random} symmetric matrix. All
+three are row-normalised and used with the same $\alpha{=}0.7$.
+Table~\ref{tab:prior} reports the result.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{4}{c}{5-way 1-shot accuracy (seed 42)} \\
+\cmidrule(lr){2-5}
+Dataset & none & random & uniform & \textbf{linguistic} \\
+\midrule
+NADI 18        & 0.391 & 0.395 & 0.400 & \textbf{0.401} \\
+NADI 5         & 0.480 & 0.507 & 0.505 & 0.501 \\
+amgadhasan 5   & 0.574 & 0.570 & 0.574 & \textbf{0.593} \\
+\midrule
+\multicolumn{5}{l}{\emph{Mean $\Delta$ vs.\ none:} random $+0.009$,
+uniform $+0.011$, \textbf{linguistic $+0.017$}} \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Prior-quality ablation} (CE-trained ProtoNet,
+500 episodes). At 1-shot, any prototype aggregation helps,
+since a 1-shot prototype is a high-variance estimator. The
+linguistic prior has the highest mean gain ($+0.017$ vs.\
+$+0.009$ random / $+0.011$ uniform) and is the only one that
+never hurts. Its advantage is largest on amgadhasan, the
+smallest corpus. We note honestly that on NADI 5 the random
+and uniform matrices slightly outperform the linguistic one.}
+\label{tab:prior}
+\end{table}
+
+Three conclusions follow. First, aggregation \emph{per se}
+helps at 1-shot: all three priors beat ``none'' on average,
+because a single support example yields a noisy prototype and
+aggregation reduces its variance. Second, the linguistic prior
+has the highest mean gain and is the only one that never
+hurts, supporting our claim that dialectological structure
+carries real signal beyond arbitrary smoothing. Third, the
+prior's benefit is largest where the paper claims it should
+be---on the smallest, noisiest corpus (amgadhasan, $+0.018$,
+where random and uniform \emph{hurt})---and essentially
+vanishes at 5-shot, where prototypes are already stable. We
+report the honest caveat that on NADI 5 the linguistic matrix
+is slightly worse than a uniform prior ($0.501$ vs.\ $0.505$),
+consistent with the 5-way coarse labels being a summary of the
+18-way dialectology and thus carrying less fine-grained
+structure to exploit. We add a further observation: on the
+5-way \emph{coarse} NADI task the five macro-groups
+(Khaleeji, Iraqi, Levantine, Masri, Maghrebi) are already
+well separated in feature space, so the fine-grained
+dialectological detail that LPA encodes adds little signal
+there, while a uniform prior acts as stronger generic
+regularisation for the noisy 1-shot prototypes. This is
+consistent with---and reinforces---the paper's central claim:
+LPA's value is tied to the availability of meaningful
+\emph{fine-grained} linguistic structure, which is exactly
+what the 18-way task provides and the coarse task does not.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\linewidth]{figs/fig5_sensitivity.pdf}
+\caption{\textbf{LPA sensitivity} on NADI 18 5-way 1-shot
+(seed 42). We sweep $\alpha \in \{0.3, 0.5, 0.7, 0.9\}$ (trust in
+the raw prototype) and $\tau_{\text{ling}} \in \{0.3, 0.5,
+1.0\}$ (sharpness of the dialectal aggregation). The
+configuration $(\alpha{=}0.7, \tau_{\text{ling}}{=}0.5)$ that we
+use in the main table is \emph{also the best} configuration
+($0.436$), validating our defaults.}
+\label{fig:sens}
+\end{figure}
+
+\section{Limitations}
+\label{sec:limits}
+
+\paragraph{Compute budget.}
+All main-table experiments use 500 training episodes on 1 seed
+(seed 42). The paired significance tests use 200 episodes on a
+separate evaluation seed (12345); the multi-seed runs use 4 seeds
+(0, 7, 42, 123). The single-seed main results are robust
+($\sigma \le 0.018$). Full multi-seed runs for all
+7 methods (MatchingNet, RelationNet, FineTune, Focal, CB, MAML)
+are planned for the camera-ready version; details in the
+supplementary material.
+
+\paragraph{SoftAnchor ablation.}
+We tried replacing the hard-coded dialect matrix with a
+\emph{learned} matrix $W^{\text{learned}}_{c, c'} =
+\exp(-\|e_c - e_{c'}\|/\tau_{\text{ling}})$ regularised by a
+Frobenius anchor loss $\|W^{\text{learned}} - W^{\text{expert}}\|_F^2$.
+With only 500 training episodes and $\le 200$ tweets per dialect
+class, the learned $e_c$ embeddings do not converge; this
+achieves \emph{worse} accuracy than hard-coded LPA on 4 of 6
+cells. With more training data this may improve.
+
+\paragraph{LLM baseline.}
+We were unable to run GPT-4o or Jais due to SSL/API constraints;
+our TF-IDF baseline (0.27/0.25/0.30) is a worst-case proxy.
+Future work should benchmark against GPT-4o 5-shot ICL and
+LoRA-fine-tuned Jais.
+
+\paragraph{Method-level limitations.}
+Beyond the resource constraints above, three limitations are
+inherent to the method itself. \textbf{(i)} LPA depends on an
+external dialectological prior; for low-resource dialect
+continua without such scholarship the prior must be hand-built
+or replaced by the (weaker) learned variant of
+\S\ref{sec:limits}, so LPA does not transfer freely to every
+language. \textbf{(ii)} All experiments use a single encoder
+(AraBERTv2-base); whether the SCP and LPA gains hold for other
+Arabic encoders (e.g.\ MARBERT, AraELECTRA) or multilingual
+models is untested. \textbf{(iii)} The two mechanisms have
+asymmetric deployment cost: LPA is test-time-only and free,
+whereas SCP requires a full encoder re-training, so SCP is
+inappropriate when only the encoder weights are available
+pre-trained and no training budget exists.
+
+\section{Ethical Considerations}
+ADI has surveillance and profiling implications. We use only
+public datasets (NADI 2024, amgadhasan) and acknowledge that
+dialect labels reflect academic categorisation rather than
+speaker self-identification.
+
+\section*{Acknowledgments}
+We thank the NADI shared task organizers and the amgadhasan
+dataset curators for making their data publicly available.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

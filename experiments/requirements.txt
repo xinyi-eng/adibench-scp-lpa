@@ -1,0 +1,34 @@
+# DACD-Bench v4 + DACD method dependencies
+# Versions reflect what was installed at D:\dacd2026\site-packages when this
+# session ran; use these exact versions for reproducibility.
+
+# Core ML
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+
+# HuggingFace stack
+transformers==4.47.0
+datasets==3.1.0
+huggingface_hub==0.27.0
+evaluate==0.4.2
+
+# Data + numerics
+pandas
+numpy
+scikit-learn
+scipy
+pyyaml==6.0.3
+
+# Plotting (used by generate_figures_v4.py, render_tsne_real.py)
+matplotlib
+
+# Implicit (transitive, but listed for clarity)
+# sympy, mpmath, networkx, markupsafe, jinja2, filelock, fsspec, typing_extensions
+# are pulled in by torch; no need to install separately.
+
+# The dacd package itself lives at D:\dacd2026\2_models\dacd++\dacd\ and is
+# imported via `sys.path.insert(0, r'D:/dacd2026/2_models/dacd++')`. It is
+# not on PyPI; copy the dacd/ directory alongside this repo to use.
+
+# TexLive (system-level) for paper compilation:
+#   pdflatex (TeXL 2025) is required; install via tlmgr install acl.
