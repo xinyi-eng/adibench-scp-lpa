@@ -1,0 +1,37 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\pagestyle{plain}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\begin{center}
+{\Large \textbf{Explanation of Revisions}}\\[8pt]
+{\large Anonymized ACL Rolling Review Submission}\\[4pt]
+\end{center}
+
+\noindent\textbf{Previous submission:} ACL Rolling Review, May 2026 cycle. The previous version was \emph{desk rejected} before review; no reviewer comments, scores, or meta-review were issued. Consequently there is no point-by-point review response to provide. This document instead summarizes (i) how the desk-rejection causes were remedied and (ii) the substantive changes made since that submission.
+
+\paragraph{1. Remedies for the desk-rejection causes.}
+The May 2026 version was desk rejected for three format violations, all of which are fixed in the present submission:
+\begin{itemize}
+\item \textbf{Bibliography style.} The reference list now uses the official ACL style files (\texttt{acl.sty} with the \texttt{acl\_natbib.bst} author--year bibliography style) from the official \texttt{acl-org/acl-style-files} repository; the previously used non-conforming style has been removed.
+\item \textbf{Equations out of margins.} All displayed and inline equations have been rechecked; the compiled manuscript contains zero overfull boxes and no content extending beyond the margins.
+\item \textbf{Placement of Limitations.} The Limitations section now appears immediately after the Conclusion, followed by the Ethics Statement, Acknowledgements, and References, as required.
+\end{itemize}
+
+\paragraph{2. Substantive changes since the previous submission.}
+Beyond the format fixes, the manuscript has been substantially rewritten and is no longer a minor revision:
+\begin{itemize}
+\item The evaluation is now built on \textbf{ADIBench}, a new multi-granularity benchmark unifying three public Arabic dialect corpora (NADI 2024 18-way, NADI 2024 5-way coarse, and the amgadhasan 5-city corpus) under a single few-shot protocol, rather than a single corpus.
+\item The proposed method has been replaced by two mechanisms with separate analyses: \textbf{LPA} (Linguistic-Prior Aggregation), a test-time prototype aggregation driven by a dialectological distance matrix, and \textbf{SCP} (Supervised Contrastive Pre-training) of the encoder, together with an analysis of why the two do not stack.
+\item \textbf{Seven published few-shot baselines} (ProtoNet, MatchingNet, RelationNet, FineTune, Focal, CB, MAML) are re-implemented and evaluated under the unified protocol, replacing the previous baseline set.
+\item New experiments include \textbf{multi-seed results with mean $\pm$ std}, \textbf{Macro-F1 in addition to accuracy}, a \textbf{class-balanced control} isolating support-set size from class imbalance, and a \textbf{support-size sweep} ($k \in \{1,3,5,10,20\}$) demonstrating that the reported failure mode of fine-tuning is not a small-$k$ artefact.
+\item The framing has been revised: the paper now positions the contribution as an analysis of when fine-tuning collapses in few-shot long-tail dialect identification together with two complementary, individually effective remedies.
+\end{itemize}
+
+All changes preserve the anonymity of the submission.
+
+\end{document}

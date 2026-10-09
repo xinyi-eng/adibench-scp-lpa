@@ -1,0 +1,30 @@
+{
+  "method": "ce",
+  "seed": 42,
+  "curriculum": false,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 0.39547755365570386,
+      "elapsed_s": 10.393518447875977,
+      "macro_f1": 0.5288824787440759,
+      "f1_Khaleji": 0.7429643527204502,
+      "f1_Iraqi": 0.8436830835117773,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 1,
+      "train_loss": 0.12186995881299177,
+      "elapsed_s": 8.817975044250488,
+      "macro_f1": 0.529821561006845,
+      "f1_Khaleji": 0.871331828442438,
+      "f1_Iraqi": 0.718132854578097,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    }
+  ],
+  "imbalance": 3.0
+}

@@ -1,0 +1,9 @@
+{
+  "method": "protonet",
+  "source": "nadi_18",
+  "target": "amgadhasan_5",
+  "seed": 42,
+  "accuracy": 0.6695333333333333,
+  "std": 0.06213787537046592,
+  "ci95": 0.008611870156424277
+}

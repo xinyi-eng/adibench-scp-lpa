@@ -1,0 +1,19 @@
+{
+  "method": "focal",
+  "seed": 42,
+  "curriculum": false,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 0.08647214574000192,
+      "elapsed_s": 8.682841777801514,
+      "macro_f1": 0.17823429274632646,
+      "f1_Khaleji": 0.0,
+      "f1_Iraqi": 0.30120481927710846,
+      "f1_Levantine": 0.24066390041493776,
+      "f1_Masri": 0.23391812865497075,
+      "f1_Maghrebi": 0.11538461538461539
+    }
+  ],
+  "imbalance": 100.0
+}

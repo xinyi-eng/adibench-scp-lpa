@@ -1,0 +1,14 @@
+{
+  "method": "cf_no_margin",
+  "dataset": "amgadhasan_5",
+  "n_way": 5,
+  "k_shot": 1,
+  "seed": 123,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.6596666666666666,
+  "std": 0.11988837400775033,
+  "ci95": 0.01661568092027662,
+  "train_time_s": 201.6723117828369,
+  "eval_time_s": 56.005265951156616
+}

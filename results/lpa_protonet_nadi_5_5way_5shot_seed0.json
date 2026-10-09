@@ -1,0 +1,14 @@
+{
+  "method": "lpa_protonet",
+  "dataset": "nadi_5",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 0,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.6884666666666667,
+  "std": 0.0569471880097887,
+  "ci95": 0.00789247759100046,
+  "train_time_s": 244.19479393959045,
+  "eval_time_s": 81.59770250320435
+}

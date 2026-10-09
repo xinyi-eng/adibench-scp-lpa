@@ -1,0 +1,14 @@
+{
+  "method": "matchingnet",
+  "dataset": "amgadhasan_5",
+  "n_way": 5,
+  "k_shot": 1,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.5793333333333334,
+  "std": 0.11440862438353733,
+  "ci95": 0.015856226369053473,
+  "train_time_s": 224.14126992225647,
+  "eval_time_s": 68.18700218200684
+}

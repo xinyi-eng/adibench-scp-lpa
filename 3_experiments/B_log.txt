@@ -1,0 +1,15 @@
+== method=ce seed=0 curriculum=False ==
+device=cuda
+train: 52000  val: 500
+  num_classes (inferred from data): 5
+2026-07-23 21:49:13.214283: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-07-23 21:49:35.839449: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+epoch 1/3 loss=0.2375 macro_f1=0.6398 elapsed=696.7s
+epoch 2/3 loss=0.0424 macro_f1=0.6448 elapsed=718.9s
+epoch 3/3 loss=0.0279 macro_f1=0.5633 elapsed=769.2s
+ce       seed=0 best_F1=0.6448 time=2233s
+== method=ce seed=1 curriculum=False ==
+device=cuda
+train: 52000  val: 500
+  num_classes (inferred from data): 5
+epoch 1/3 loss=0.2406 macro_f1=0.6575 elapsed=1170.5s

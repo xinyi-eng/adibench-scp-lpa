@@ -1,0 +1,9 @@
+{
+  "method": "scp_lpa",
+  "source": "nadi_18",
+  "target": "amgadhasan_5",
+  "seed": 42,
+  "accuracy": 0.6864,
+  "std": 0.06045692681570905,
+  "ci95": 0.008378902572532992
+}

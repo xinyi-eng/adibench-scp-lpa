@@ -1,0 +1,14 @@
+{
+  "method": "softanchor",
+  "dataset": "nadi_5",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.6781333333333334,
+  "std": 0.057023036280670514,
+  "ci95": 0.007902989625030095,
+  "train_time_s": 469.3775727748871,
+  "eval_time_s": 147.00914406776428
+}

@@ -1,0 +1,22 @@
+{
+  "method": "ami",
+  "ratio": "1000_1",
+  "seed": 42,
+  "epochs": 1,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 1.4095444049072037,
+      "macro_f1": 0.0015936254980079682,
+      "f1_Khaleji": 0.00796812749003984,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0,
+      "elapsed_s": 57.7796995639801,
+      "n_train": 4518,
+      "n_val": 502
+    }
+  ],
+  "total_time_s": 57.78120470046997
+}

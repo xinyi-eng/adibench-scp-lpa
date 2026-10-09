@@ -1,0 +1,14 @@
+{
+  "method": "protonet",
+  "dataset": "amgadhasan_5",
+  "n_way": 3,
+  "k_shot": 1,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.6747777777777778,
+  "std": 0.16972275868254916,
+  "ci95": 0.023522374262879227,
+  "train_time_s": 150.44835424423218,
+  "eval_time_s": 40.73369121551514
+}

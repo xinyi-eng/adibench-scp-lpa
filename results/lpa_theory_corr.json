@@ -1,0 +1,7 @@
+{
+  "dataset": "nadi_18",
+  "n_classes": 18,
+  "n_tweets_per_class": 200,
+  "spearman_rho": 0.43490629334902686,
+  "spearman_p_value": 1.4974558641240925e-15
+}

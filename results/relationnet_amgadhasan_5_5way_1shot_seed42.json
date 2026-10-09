@@ -1,0 +1,14 @@
+{
+  "method": "relationnet",
+  "dataset": "amgadhasan_5",
+  "n_way": 5,
+  "k_shot": 1,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.595,
+  "std": 0.11296754696224338,
+  "ci95": 0.015656503228158362,
+  "train_time_s": 230.40351724624634,
+  "eval_time_s": 70.02642226219177
+}

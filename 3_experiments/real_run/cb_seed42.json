@@ -1,0 +1,19 @@
+{
+  "method": "cb",
+  "seed": 42,
+  "curriculum": false,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 0.19817967331480413,
+      "elapsed_s": 7.565773963928223,
+      "macro_f1": 0.15921040322221008,
+      "f1_Khaleji": 0.0,
+      "f1_Iraqi": 0.287292817679558,
+      "f1_Levantine": 0.19230769230769232,
+      "f1_Masri": 0.1761006289308176,
+      "f1_Maghrebi": 0.14035087719298245
+    }
+  ],
+  "imbalance": 100.0
+}

@@ -1,0 +1,14 @@
+{
+  "method": "matchingnet",
+  "dataset": "nadi_5",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 0,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.632,
+  "std": 0.06999682532483567,
+  "ci95": 0.009701065050349426,
+  "train_time_s": 257.5187089443207,
+  "eval_time_s": 91.48835039138794
+}

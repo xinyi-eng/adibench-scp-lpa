@@ -1,0 +1,36 @@
+{
+  "ldam_100_1": {
+    "macro": 0.6800294759859515,
+    "per_class": {
+      "Khaleji": 0.6376811594202898,
+      "Iraqi": 0.6989247311827957,
+      "Levantine": 0.6702127659574468,
+      "Masri": 0.7643979057591623,
+      "Maghrebi": 0.6289308176100629
+    },
+    "time": 2682.1620800495148
+  },
+  "ldam_1000_1": {
+    "error": "[Errno 2] No such file or directory: 'D:/dacd2026/1_data/processed/dacd_bench_1000_1_val.csv'"
+  },
+  "ldam_7000_1": {
+    "error": "[Errno 2] No such file or directory: 'D:/dacd2026/1_data/processed/dacd_bench_7000_1_val.csv'"
+  },
+  "la_100_1": {
+    "macro": 0.6672657349916518,
+    "per_class": {
+      "Khaleji": 0.6476190476190476,
+      "Iraqi": 0.7078651685393258,
+      "Levantine": 0.6770833333333334,
+      "Masri": 0.691358024691358,
+      "Maghrebi": 0.6124031007751938
+    },
+    "time": 3834.421236038208
+  },
+  "la_1000_1": {
+    "error": "[Errno 2] No such file or directory: 'D:/dacd2026/1_data/processed/dacd_bench_1000_1_val.csv'"
+  },
+  "la_7000_1": {
+    "error": "[Errno 2] No such file or directory: 'D:/dacd2026/1_data/processed/dacd_bench_7000_1_val.csv'"
+  }
+}

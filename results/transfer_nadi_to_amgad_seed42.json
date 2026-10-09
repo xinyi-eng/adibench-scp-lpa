@@ -1,0 +1,38 @@
+[
+  {
+    "method": "protonet",
+    "source": "nadi_18",
+    "target": "amgadhasan_5",
+    "seed": 42,
+    "accuracy": 0.6695333333333333,
+    "std": 0.06213787537046592,
+    "ci95": 0.008611870156424277
+  },
+  {
+    "method": "scp",
+    "source": "nadi_18",
+    "target": "amgadhasan_5",
+    "seed": 42,
+    "accuracy": 0.7050666666666666,
+    "std": 0.0550807084598995,
+    "ci95": 0.007633796723052618
+  },
+  {
+    "method": "lpa",
+    "source": "nadi_18",
+    "target": "amgadhasan_5",
+    "seed": 42,
+    "accuracy": 0.6982666666666667,
+    "std": 0.05722951841294646,
+    "ci95": 0.007931606588551625
+  },
+  {
+    "method": "scp_lpa",
+    "source": "nadi_18",
+    "target": "amgadhasan_5",
+    "seed": 42,
+    "accuracy": 0.6864,
+    "std": 0.06045692681570905,
+    "ci95": 0.008378902572532992
+  }
+]

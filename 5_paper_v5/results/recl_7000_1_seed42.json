@@ -1,0 +1,23 @@
+{
+  "method": "recl",
+  "ratio": "7000_1",
+  "seed": 42,
+  "epochs": 1,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 0.25324766011703514,
+      "macro_f1": 0.0,
+      "f1_Khaleji": 0.0,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0,
+      "elapsed_s": 4.850149631500244,
+      "n_train": 454,
+      "n_val": 50
+    }
+  ],
+  "imbalance": 70001.0,
+  "total_time_s": 4.8521506786346436
+}

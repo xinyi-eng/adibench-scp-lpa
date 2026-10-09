@@ -1,0 +1,882 @@
+      SCP-LPA: Linguistic-Prior Supervised Contrastive Prototypical Networks
+               for Long-Tail Few-Shot Arabic Dialect Identification
+
+
+                                           Anonymous ACL submission
+
+
+
+
+001                       Abstract                                  underlying failure (minority-class feature col-      048
+                                                                    lapse). We argue that LPA is therefore the more      049
+002     Long-tail Arabic dialect identification (ADI)               valuable contribution—a lightweight, domain-         050
+003     is challenging because standard fine-tuning                 specific prior that matches the performance of       051
+004     collapses to majority-class prediction even at              full re-training at a fraction of the cost.          052
+005     moderate imbalance ratios (5.8:1). We intro-
+006     duce LPA (Linguistic-Prior Aggregation), a              1   Introduction                                         053
+007     test-time-only modification of Prototypical Net-
+008     works that replaces each class prototype with a         Arabic dialect identification (ADI) is foundational      054
+009     weighted average of itself and its linguistically       for Arabic NLP (Al-Badrashiny et al., 2024;              055
+010     related siblings, where the weights come from           Bouamor et al., 2019). The NADI 2024 shared              056
+011     a dialectological distance matrix (Versteegh,           task covers 18 country-level dialects, with sam-         057
+012     2006; Habash, 2010). We additionally study              ple counts ranging from 9.5K (Yemen) to 55K              058
+013     SCP (Supervised Contrastive Pre-training),
+                                                                (Egypt)—a 5.8× long-tail ratio (Al-Badrashiny            059
+014     which replaces the cross-entropy encoder ob-
+015     jective with a contrastive one. We evaluate both        et al., 2024). Most dialects are severely under-         060
+016     on ADIBench, a new multi-granularity bench-             represented, and standard supervised training de-        061
+017     mark that unifies three Arabic dialect corpora          generates to majority-class prediction at extreme        062
+018     (NADI 2024 18-way, NADI 2024 5-way coarse,              ratios.                                                  063
+019     amgadhasan 5-city) and re-implements seven                  Existing benchmarks and shared tasks have two        064
+020     published few-shot baselines. Our key find-             limitations: (a) they evaluate on balanced test sets,    065
+021     ings are threefold. (1) In the few-shot (5-way
+                                                                which mask the collapse-to-majority failure mode         066
+022     k-shot) regime, all fine-tuning methods (Fine-
+023     Tune, Focal, CB, MAML) collapse to chance               that occurs during training under imbalance; and         067
+
+024     (0.20) on every dataset and seed, extending             (b) they report results at a single fixed granular-      068
+025     the failure mode first reported at a 7000:1 ra-         ity, providing no information about how methods          069
+026     tio (Anonymous, 2024) to the moderate 5.8:1             generalize across dialects of different coarseness (5-   070
+027     regime. A class-balanced control shows that             way coarse vs 18-way fine) and different domains         071
+028     the collapse is driven by the support-set size          (country-level vs city-level).                           072
+029     per class, not class imbalance. A support-size              This paper introduces ADIBench (Arabic Di-           073
+030     sweep confirms this is not a small-k artefact:
+031     with k swept over {1, 3, 5, 10, 20}, FineTune
+                                                                alect Identification Benchmark), a standardized          074
+
+032     remains at chance (0.199–0.204) at every sup-           evaluation suite for few-shot Arabic dialect iden-       075
+033     port size while ProtoNet improves monoton-              tification. ADIBench has three contributions:            076
+034     ically (0.401→0.611; Appendix Figure A.1).              (1) Datasets: we unify three public Arabic dialect       077
+035     Even twenty labelled examples per class do not          benchmarks—NADI 2024 18-way, NADI 2024 5-                078
+036     stabilise the fine-tuned decision boundary.             way (coarse), and amgadhasan 5-city—and pro-             079
+037     Macro-F1, which penalises minority-class er-            vide a unified protocol for loading, splitting, and      080
+038     rors far more harshly, leaves the ordering intact       evaluating across all three. (2) Baselines: we           081
+039     while sharpening the collapse: FineTune falls           re-implement 7 published few-shot methods (Pro-          082
+040     to 0.07–0.13 (vs. its already-low accuracy of           toNet, MatchingNet, RelationNet, FineTune, Fo-           083
+041     ≈0.20), whereas the metric-learning methods             cal, Class-Balanced, MAML) under a single train-         084
+042     stay within 0.02 of their accuracy (Appendix
+                                                                ing and evaluation framework, ensuring apples-to-        085
+043     Table A.5). (2) Both LPA and SCP individually
+044     recover ∼3 percentage points over ProtoNet on           apples comparison. (3) Findings: we report 48            086
+045     all six (dataset, shot) cells. (3) The two mech-        (method, dataset, N-way, k-shot) cells in the head-      087
+046     anisms do not stack: combining them yields              line results (8 baselines × 3 datasets × 2 shots         088
+047     no marginal gain, because they treat the same           at the canonical 5-way), plus a 12-cell granularity      089
+
+
+                                                            1
+                Metric-learning methods outperform fine-tuning by a large margin; the three variants tie at the top
+                                                                                                      0.788
+                                                                                                                              Dataset             Classes    Size     Granularity
+           SCP-ProtoNet
+          SCP-LPA (ours)                                                                             0.785
+           LPA-ProtoNet                                                                              0.785
+                                                                                                                              NADI 2024 18-way      18      440,052   Country
+               ProtoNet                                                                             0.768                     NADI 2024 5-way        5      440,052 Coarse dialect
+            RelationNet                                                                         0.760                         amgadhasan 5-city      5      147,725     City
+           MatchingNet                                                                        0.734
+                  MAML                        0.195                                                                       Table 1: Three datasets in ADIBench. The 5-way coarse
+                     CB                       0.202
+                   Focal                  0.189                                                                           task maps 18 NADI country labels into 5 dialect groups
+               FineTune                   0.197
+                                                                                                                          by majority rule.
+                Random                    0.200
+
+                           0            0.2                0.4                0.6                   0.8
+                                       5-way 5-shot accuracy (amgadhasan 5-city, 4-seed mean±std)
+                                                                                                                          (Khaleeji vs. Maghrebi) on DataFlare (Anonymous,           123
+      Figure 1: Headline result: metric-learning methods out-                                                             2024). That work reported that standard cross-             124
+      perform fine-tuning on long-tail ADI. 5-way 5-shot
+                                                                                                                          entropy collapses to majority-class prediction un-         125
+      accuracy on amgadhasan 5-city, the dataset with the
+      smallest long-tail ratio (4.7:1). FineTune-class methods                                                            der such ratios, and proposed contrastive debi-            126
+
+      (grey/red) collapse to chance (≤ 0.20); metric-learning                                                             asing (positive re-weighting, class-balanced sam-          127
+      methods (blue) cluster around 0.74–0.78. The three vari-                                                            pling, Khaleeji debiasing) to recover Macro-F1 of          128
+      ants of our method—LPA-ProtoNet, SCP-ProtoNet, and                                                                  28.93%. Our ADIBench finding that all four fine-           129
+      SCP-LPA—all reach the top and are statistically tied                                                                tuning methods (FineTune, Focal, CB, MAML)                 130
+      (0.785–0.788, within one standard deviation of each                                                                 collapse to chance at the much milder 5.8:1 ratio of       131
+      other), consistent with the ablation finding that the two                                                           NADI 18 extends this observation: the same failure         132
+      mechanisms do not stack. Error bars are mean±std over
+                                                                                                                          mode is not an artefact of extreme imbalance alone,        133
+      4 seeds.
+                                                                                                                          but a more general phenomenon in Arabic dialect            134
+090   curve (ProtoNet at 3-/5-/10-way). Our key finding                                                                   identification.                                            135
+091   is all fine-tuning-based methods (FineTune, Fo-
+                                                                                                                          Research gap. Three gaps motivate this paper.              136
+092   cal, CB, MAML) collapse to chance (0.20 accu-
+                                                                                                                          (i) Few-shot ADI. No prior work evaluates the              137
+093   racy for 5-way) on all three datasets, regardless
+                                                                                                                          long-tail failure mode under few-shot conditions;          138
+094   of the loss function or sampling strategy. In con-
+                                                                                                                          existing ADI benchmarks either train on full data          139
+095   trast, metric-learning methods (ProtoNet, Match-
+                                                                                                                          or fine-tune on labelled subsets, so the regime rel-       140
+096   ingNet, RelationNet) maintain 0.35–0.60 accuracy
+                                                                                                                          evant to practical deployment—new dialects with            141
+097   on the same task. Code and data are released open-
+                                                                                                                          a handful of examples—is unstudied. (ii) Linguis-          142
+098   source. Figure 1 summarises the headline contrast
+                                                                                                                          tic prior at test-time. Class-imbalance remedies           143
+099   on the smallest-corpus (amgadhasan 5-city, 5-way
+                                                                                                                          in ADI have so far been training-time only (re-            144
+100   5-shot); full numbers are in Table 2.
+                                                                                                                          weighting, debiasing, contrastive losses); no prior        145
+
+101   2         Related Work                                                                                              work injects a hand-crafted dialectological prior at       146
+                                                                                                                          the prototype layer as a test-time-only change. (iii)      147
+102   Few-shot learning. Prototypical Networks (Snell                                                                     Unified benchmark. NADI, MADAR and QADI                    148
+103   et al., 2017) learn per-class prototypes as the mean                                                                have been evaluated under incompatible protocols;          149
+104   of support features. Matching Networks (Vinyals                                                                     a single unified benchmark covering country-level,         150
+105   et al., 2016) use cosine-similarity attention. Re-                                                                  regional-group, and city- level granularity is miss-       151
+106   lation Networks (Sung et al., 2018) learn a deep                                                                    ing. This paper addresses all three gaps: ADIBench         152
+107   distance metric. MAML (Finn et al., 2017) learns                                                                    defines the protocol, and SCP-LPA introduces the           153
+108   a good initialization for fast adaptation. Long-tail                                                                linguistic-prior mechanism.                                154
+109   remedies include focal loss (Lin et al., 2017), class-
+110   balanced loss (Cui et al., 2019), and LDAM (Cao                                                                     3     Benchmark Datasets                                   155
+111   et al., 2019).
+                                                                                                                          NADI 2024 18-way. The NADI 2024 shared task                156
+112   Arabic dialect identification. Public bench-                                                                        provides 440K tweets labeled with 18 country-level         157
+113   marks include NADI 2024 (Al-Badrashiny et al.,                                                                      dialects (OM, SD, SA, KW, QA, LB, JO, SY, IQ,              158
+114   2024), QADI (Abdelrahman et al., 2020), and                                                                         MA, EG, PL, YE, BH, DZ, AE, TN, LY). Class                 159
+115   MADAR (Bouamor et al., 2019). Existing meth-                                                                        sizes range from 9.5K (Yemen) to 55K (Egypt),              160
+116   ods fine-tune BERT variants (Antoun et al., 2020;                                                                   giving a 5.8× long-tail ratio.                             161
+117   Abdul-Mageed et al., 2021). The NADI shared
+                                                                                                                          NADI 2024 5-way. We map the 18 country labels              162
+118   task series has driven progress on country-level di-
+                                                                                                                          to 5 coarse dialect groups: Khaleeji (SA, KW, AE,          163
+119   alect identification, but no prior work evaluates the
+                                                                                                                          BH, QA, OM, YE), Iraqi (IQ), Levantine (LB, SY,            164
+120   long-tail failure mode in a few-shot setting.
+                                                                                                                          JO, PL), Masri (EG, SD), Maghrebi (MA, DZ, TN,             165
+121   Extreme class imbalance. The most166
+                                        extreme                                                                           LY). This gives a 5-way task with 88K tweets per
+      ADI imbalance ratio documented is1677000:1                                                                                122average.
+                                                                                                                          class on
+
+                                                                                                                      2
+                                                  Arabic dialectal distance matrices used by LPA (from Versteegh 2006 + Habash 2010)
+                              (a) NADI 2024 18-way                                                             (b) NADI 2024 5-way (coarse)                               (c) amgadhasan 5-city
+                                                                                                                                                                                                                                                                             SCP-LPA: Training and Inference Pipeline
+          OM    0.0 0.6 0.2 0.2 0.2 0.6 0.6 0.6 0.5 0.9 0.6 0.6 0.2 0.2 0.9 0.1 0.9 0.9                                                                                                   1.0
+          SD    0.6 0.0 0.6 0.6 0.6 0.4 0.4 0.4 0.6 0.6 0.1 0.4 0.6 0.6 0.6 0.6 0.6 0.6
+                                                                                            Khale.          0.0      0.6            0.6     0.7         0.9   EG    0.0     0.3    0.8    0.1                                     0.6
+          SA    0.2 0.6 0.0 0.1 0.2 0.6 0.6 0.6 0.5 0.9 0.6 0.6 0.2 0.1 0.9 0.1 0.9 0.9
+          KW    0.2 0.6 0.1 0.0 0.2 0.6 0.6 0.6 0.5 0.9 0.6 0.6 0.2 0.1 0.9 0.1 0.9 0.9
+
+
+
+
+                                                                                                                                                                                              dialect distance (0=same, 1=far)
+                                                                                                                                                                                          0.8
+          QA    0.2 0.6 0.2 0.2 0.0 0.6 0.6 0.6 0.5 0.9 0.6 0.6 0.2 0.2 0.9 0.1 0.9 0.9
+                                                                                                                                                                                                                                                                                                                 expertling
+                                                                                                                                                                                                                                                                                                                        matrix mix
+                                                                                                                                                                                                                                                                                                                                     raw prototypes
+           LB   0.6 0.4 0.6 0.6 0.6 0.0 0.1 0.1 0.4 0.8 0.4 0.2 0.6 0.6 0.8 0.6 0.8 0.8       Iraqi         0.6      0.0            0.5     0.6         0.9   LY    0.3     0.0    0.7    0.4                                     0.4
+                                                                                                                                                                                                                                                  Arabic               AraBERT             featureat inference       W
+                                                                                                                                                                                                                                                                                                                                           pc          nearest
+           JO   0.6 0.4 0.6 0.6 0.6 0.1 0.0 0.1 0.4 0.8 0.4 0.2 0.6 0.6 0.8 0.6 0.8 0.8
+                                                                                                                                                                                                                                                                        (last 4                                                           mixed       prototype
+           SY
+           IQ
+                0.6 0.4 0.6 0.6 0.6 0.1 0.1 0.0 0.4 0.8 0.4 0.2 0.6 0.6 0.8 0.6 0.8 0.8
+                0.5 0.6 0.5 0.5 0.5 0.4 0.4 0.4 0.0 0.8 0.6 0.4 0.5 0.5 0.8 0.5 0.8 0.8
+                                                                                                                                                                                          0.6
+                                                                                                                                                                                                                                                  tweet                unfrozen)           z 256                  (Versteegh)             pcLPA
+          MA    0.9 0.6 0.9 0.9 0.9 0.8 0.8 0.8 0.8 0.0 0.6 0.8 0.9 0.9 0.1 0.9 0.2 0.2    Levant.          0.6      0.5            0.0     0.4         0.9   LB    0.8     0.7    0.0    0.8                                     0.7
+          EG    0.6 0.1 0.6 0.6 0.6 0.4 0.4 0.4 0.6 0.6 0.0 0.4 0.6 0.6 0.6 0.6 0.6 0.6                                                                                                   0.4
+           PL   0.6 0.4 0.6 0.6 0.6 0.2 0.2 0.2 0.4 0.8 0.4 0.0 0.6 0.6 0.8 0.6 0.8 0.8
+           YE   0.2 0.6 0.2 0.2 0.2 0.6 0.6 0.6 0.5 0.9 0.6 0.6 0.0 0.2 0.9 0.2 0.9 0.9      Masri          0.7      0.6            0.4     0.0         0.7   SD    0.1     0.4    0.8    0.0                                     0.6                          train        train
+          BH    0.2 0.6 0.1 0.1 0.2 0.6 0.6 0.6 0.5 0.9 0.6 0.6 0.2 0.0 0.9 0.2 0.9 0.9                                                                                                   0.2
+          DZ    0.9 0.6 0.9 0.9 0.9 0.8 0.8 0.8 0.8 0.1 0.6 0.8 0.9 0.9 0.0 0.9 0.1 0.2
+          AE    0.1 0.6 0.1 0.1 0.1 0.6 0.6 0.6 0.5 0.9 0.6 0.6 0.2 0.2 0.9 0.0 0.9 0.9
+          TN    0.9 0.6 0.9 0.9 0.9 0.8 0.8 0.8 0.8 0.2 0.6 0.8 0.9 0.9 0.1 0.9 0.0 0.1   Maghrebi          0.9      0.9            0.9     0.7         0.0   MA    0.6     0.4    0.7    0.6
+                                                                                                                                                                                          0.0
+                                                                                                                                                                                                                                  0.0
+           LY   0.9 0.6 0.9 0.9 0.9 0.8 0.8 0.8 0.8 0.2 0.6 0.8 0.9 0.9 0.2 0.9 0.1 0.0
+
+                                                                                                         le.          i          t.          ri         bi         EG      LY     LB     SD                                      MA
+                                                                                                                                                                                                                                                   SupCon loss              CE auxiliary
+                                                                                                      Kha         Iraq         an         Mas        hre                                                                                                                      0.5 CE
+           OM
+           SD
+           SA
+           KW
+           QA
+            LB
+            JO
+            SY
+            IQ
+           MA
+           EG
+            PL
+            YE
+           BH
+           DZ
+           AE
+           TN
+            LY
+
+
+
+                                                                                                                           Lev                    Mag                                                                                                 SupCon
+
+
+      Figure 2: Dialectal distance matrices (Figure 2) used
+      by LPA, derived from Versteegh (2006); Habash (2010).
+      We see clear clusters: Khaleeji (OM, SD, SA, KW,
+                                                                                                                                                                                                                                            Figure 3: Method overview (Figure 3). Left: during
+      QA, BH, AE, YE) is the largest cluster with internal
+                                                                                                                                                                                                                                            training, an episode is encoded with AraBERT (last 4
+      distances ≤ 0.3; Maghrebi (MA, DZ, TN, LY) forms
+                                                                                                                                                                                                                                            layers unfrozen) and the encoder is updated by a super-
+      a second tight cluster; Levantine (LB, JO, SY, PL) and
+                                                                                                                                                                                                                                            vised contrastive loss plus a small cross-entropy auxil-
+      Masri (EG) are intermediate. Khaleeji-to- Maghrebi has
+                                                                                                                                                                                                                                            iary (Mechanism 1, SCP). Right: at inference, the raw
+      the largest cross-cluster distance (0.90).
+                                                                                                                                                                                                                                            prototype of each class is mixed with its linguistically
+                                                                                                                                                                                                                                            related siblings using the fixed dialect-distance matrix
+168   amgadhasan                           5-city. The                                                                                                                                                                                      W ling from Versteegh (2006); Habash (2010) (Mecha-
+169   amgadhasan/arabic_tweets_dialects             cor-                                                                                                                                                                                    nism 2, LPA); prediction is the nearest mixed prototype.
+170   pus (amgadhasan, 2026) provides 147K tweets                                                                                                                                                                                           No re-training is involved in LPA.
+171   labeled with 5 cities: EG (Egypt, 57K), LY (Libya,
+172   36K), LB (Lebanon, 28K), SD (Sudan, 14K), MA                                                                                                                                                                                          4.1      Supervised Contrastive Pre-training                                                                                 206
+173   (Morocco, 12K). The class imbalance is 5×.                                                                                                                                                                                                     (SCP)                                                                                                               207
+
+                                                                                                                                                                                                                                            All training and evaluation are episodic: each                                                                               208
+174   Linguistic-prior          prototype      aggregation.                                                                                                                                                                                 episode is a self-contained few-shot task in which                                                                           209
+175   Generic prototype-network extensions inject                                                                                                                                                                                           every class contributes a small support set and a                                                                            210
+176   class semantics via hierarchy-aware averages                                                                                                                                                                                          query set, simulating classification under a limited                                                                         211
+177   (Snell et al., 2017), LM-derived embedding                                                                                                                                                                                            annotation budget. Given an episode of support                                                                               212
+178   coordinates, or graph-propagated smoothing along                                                                                                                                                                                      (xs , ys ) and query (xq , yq ) samples, we compute                                                                          213
+179   class-similarity graphs (Sung et al., 2018); more                                                                                                                                                                                     AraBERT features for both sets and apply the su-                                                                             214
+180   recent knowledge-guided few-shot learners inject                                                                                                                                                                                      pervised contrastive loss (Khosla et al., 2020):                                                                             215
+181   pre-trained concept metadata or graph edges (e.g.,
+182   knowledge-graph prototypes in Sung et al., 2018),                                                                                                                                                                                                          1     X        exp(sip /τ )
+183   but always rely on a generic ontology rather than                                                                                                                                                                                       ℓi =                       log P                    ,
+                                                                                                                                                                                                                                                               |P (i)|        a∈A(i) exp(sia /τ )
+184   a domain-specific distance matrix. LPA differs                                                                                                                                                                                                                                p∈P (i)
+
+185   in three ways relevant to long-tail ADI: (i) the                                                                                                                                                                                                                                                                                                            (1a)   217
+                                                                                                                                                                                                                                                                                                                                                                         216
+                                                                                                                                                                                                                                                                                                                         N
+186   prior Dc,c′ is taken from published dialectology                                                                                                                                                                                                                                                                 1 X
+                                                                                                                                                                                                                                                                          LSupCon = −                                                    ℓi .                     (1b)   218
+187   (Versteegh, 2006; Habash, 2010)—hand-curated,                                                                                                                                                                                                                                                                   N
+                                                                                                                                                                                                                                                                                                                              i=1
+188   not learned; (ii) it is test-time-only, adding N 2 ×2
+189   FLOPs per episode (648 for N =18, vs. ∼ 5×107                                                                                                                                                                                         where sij = sim(zi , zj ) is the pairwise similarity,                                                                        219
+
+190   for one AraBERT forward pass); and (iii) it targets                                                                                                                                                                                   SupCon is the natural counterpart to LPA: Ara-                                                                               220
+
+191   long-tail feature collapse at the prototype layer,                                                                                                                                                                                    bic dialects have high intra-class variance and low                                                                          221
+
+192   whereas class-frequency-aware remedies (Cao                                                                                                                                                                                           inter-class margin, so optimising a pairwise embed-                                                                          222
+
+193   et al., 2019) target margins—different mechanism                                                                                                                                                                                      ding geometry (SupCon) is more compatible with                                                                               223
+
+194   for the same downstream symptom. §6 shows the                                                                                                                                                                                         prototype classification than fitting a single global                                                                        224
+
+195   linguistic prior beats both uniform smoothing and                                                                                                                                                                                     decision boundary (CE) under small-k support.                                                                                225
+
+196   a corpus-statistics prior on average (Table 3), and                                                                                                                                                                                      P (i) is the set of positives (same label) for an-                                                                        226
+
+197   that no frequency-based mechanism recovers the                                                                                                                                                                                        chor i, A(i) is all samples, and τ =0.07 is the tem-                                                                         227
+
+198   collapse.                                                                                                                                                                                                                             perature. SupCon explicitly clusters same-class                                                                              228
+                                                                                                                                                                                                                                            samples regardless of class frequency. To stabilise                                                                          229
+
+199   4                 Method: SCP-LPA                                                                                                                                                                                                     training, we add a small CE anchor with weight                                                                               230
+                                                                                                                                                                                                                                            0.5:                                                                                                                         231
+200   We propose SCP-LPA (Supervised Contrastive                                                                                                                                                                                                        L = LSupCon + 0.5 · LCE (q).          (2)                                                                        232
+201   Prototypical networks with Linguistic-Prior
+202   Aggregation). We study two mechanisms233   that treat                                                                                                                                                                                 4.2      Linguistic-Prior Aggregation (LPA)
+                                                angles: a
+      the same long-tail failure from different 234                                                                                                                                                                                                  ProtoNet uses the mean of support features
+                                                                                                                                                                                                                                            Vanilla203
+                                                235 prior
+      training-time objective (SCP) and a test-time                                                                                                                                                                                                prototype of each class. We replace this with
+                                                                                                                                                                                                                                            as the 204
+      (LPA).                                    236                                                                                                                                                                                         a weighted
+                                                                                                                                                                                                                                                   205   aggregation over the prototypes of all
+
+                                                                                                                                                                                                                                        3
+237   classes in the episode, with weights derived from a            18’s 18 classes, evaluate on amgadhasan’s 5 city        285
+238   dialectological distance matrix:                               classes with no overlap. We do not claim inductive      286
+
+                                  X                                  generalisation to unseen dialects; that setting is      287
+239     pLPA
+         c     = α pc + (1 − α)       wling (c, c′ ) pc′ , (3)       future work.                                            288
+                                     c′
+                                                                     Experimental scope. All main-table experi-              289
+240   where wling (c, c′ ) = softmaxc′ (−Dc,c′ /τling ) is a         ments use 500 training episodes on 1 seed (seed         290
+241   row-normalised softmax over all sibling classes c′             42). The paired significance tests use 200 episodes     291
+      for each anchor c (so c′ wling (c, c′ ) = 1), α =
+                             P
+242                                                                  on a separate evaluation seed (12345); the multi-       292
+243   0.7 (trust in the raw prototype), and τling = 0.5              seed runs use 4 seeds (0, 7, 42, 123). The single-      293
+244   (sharpness of the dialectal softmax). Dc,c′ comes              seed main results are robust (σ ≤ 0.018). Full          294
+245   from Versteegh (2006); Habash (2010).                          multi-seed runs for all 7 methods (MatchingNet,         295
+                                                                     RelationNet, FineTune, Focal, CB, MAML) are             296
+246   4.3    Inference                                               planned for the camera-ready version; details in the    297
+247   At test time SCP-LPA uses nearest-prototype clas-              supplementary material.                                 298
+248   sification in Euclidean distance, with prototypes
+249   given by Eq. 3. No class-frequency adjustment, no              6   Main Results and Discussion                         299
+250   learned margin, no test-time overhead beyond one
+251   N ×N matrix multiply per episode (N = number                   We highlight five findings (see Table 2 for the head-   300
+
+252   of classes in the episode).                                    line numbers and Table 3 for the mechanism de-          301
+                                                                     composition):                                           302
+
+253   5     Experimental Setup                                          Finding 1: All fine-tuning methods collapse          303
+                                                                     to chance, on every dialect. Figure 4 shows per-        304
+254   All methods use AraBERTv2-base (Antoun et al.,                 class accuracy on NADI 18 5-way 5-shot. Fine-           305
+255   2020) as the encoder (135M parameters) with the                Tune’s bars cluster at the chance level (0.20) for      306
+256   last 4 encoder layers unfrozen (∼28M trainable pa-             all 18 dialects, including the largest (Egypt, 55K      307
+257   rameters). We train for 500 episodes with AdamW,               samples). ProtoNet’s accuracy ranges from 0.35          308
+258   learning rate 10−4 , weight decay 0.01, gradient               (Tunisia, 8.9K samples) to 0.80 (Egypt); SCP-LPA        309
+259   clipping at 1.0. We evaluate on 200 held-out                   beats ProtoNet on every class, with the largest gap     310
+260   episodes. For the headline table, we run 4 random              on the smallest classes (TN: +0.05, YE: +0.05,          311
+261   seeds (0, 7, 42, 123) and report mean±std.                     MA: +0.05). This rules out the explanation that         312
+                                                                     fine-tuning fails only on minority classes; the col-    313
+262   Few-shot protocol. All main-table experiments
+                                                                     lapse is total.                                         314
+263   follow a 5-way k-shot episodic protocol: each
+264   episode samples 5 classes from the dataset’s full                 Why does even Egypt collapse? Three mecha-           315
+
+265   label set (e.g., 5 of 18 for NADI 18; 5 of 5 for               nisms act in combination. First, support size, not      316
+
+266   NADI 5/amgadhasan) plus k support and 15 query                 class frequency, sets the bottleneck: in a 5-way        317
+
+267   examples per class. Classes are sampled uniformly              5-shot episode every class— majority or minority—       318
+
+268   at random without replacement within an episode;               provides only 5 support examples, far below the         319
+
+269   over 200 evaluation episodes, every class appears              hundreds needed to learn a stable decision bound-       320
+
+270   approximately 200×(5/|Y|) times, and we use a                  ary under cross-entropy. Second, within those 5         321
+
+271   separate random seed for the support/query draw                examples the gradient is dominated by majority-         322
+
+272   so that no leakage is possible across episodes. A              class features: the fine-tuned classifier head’s log-   323
+
+273   random classifier achieves 1/5 = 0.20 on every                 its are initialised from the encoder’s a priori class   324
+
+274   dataset, which we use as the chance baseline.                  preference, so the first few updates over-weight        325
+                                                                     whichever cluster has the largest encoder margin,       326
+275   Transductive setup. All main-table numbers are                 and subsequent updates re-encode that preference        327
+276   from a transductive within-corpus protocol: train              rather than correcting it. Third, the dialectal sig-    328
+277   and evaluation episodes draw from the same class               nal that would distinguish classes—fine-grained         329
+278   set Y, with the same N =5 classes at both train                lexical choices, phonetic spelling variants, code-      330
+279   and test time. The few-shot regime is therefore                switching patterns—has high intra-class variance        331
+280   the “few labels per known dialect” regime, not the             and low inter-class margin, so it is exactly the kind   332
+281   “new dialect” regime of standard inductive few-shot            of signal that 5 support examples cannot isolate.       333
+282   learning (where train classes are disjoint from test           Standard fine-tuning thus overfits to coarse topi-      334
+283   classes). Our cross-corpus experiment (Finding 6-              cal features and forgets the discriminative dialectal   335
+      4) probes a related transfer setting: train on NADI                   across 500 re-sampled episodes it converges
+                                                                     cues; 284                                               336
+
+
+                                                                 4
+                                       NADI 2024 18-way                   NADI 2024 5-way                     amgadhasan 5-city
+          Method                      1-shot            5-shot           1-shot            5-shot         1-shot              5-shot
+          Random                      0.200             0.200            0.200             0.200             0.200            0.200
+          TF-IDF (LLM proxy)          0.269               —              0.254               —               0.295             —
+          SCP-LPA (ours)              0.416             0.547            0.532             0.686             0.641            0.785
+          LPA-ProtoNet
+          (no SCP)                 0.420±0.002   0.549±0.005        0.537±0.006        0.689±0.004     0.656±0.010         0.785±0.004
+          SCP-ProtoNet
+          (no LPA)                 0.425±0.009   0.549±0.006        0.520±0.012        0.689±0.006     0.660±0.008         0.788±0.006
+          ProtoNet                 0.388±0.018   0.545±0.008        0.499±0.004        0.677±0.002     0.593±0.013         0.768±0.003
+          MatchingNet              0.396±0.012   0.455±0.007        0.476±0.005        0.629±0.006     0.570±0.018         0.730±0.010
+          RelationNet                  0.355         0.478              0.479              0.673           0.595               0.760
+          FineTune                 0.199±0.002   0.199±0.002        0.199±0.001        0.198±0.002     0.198±0.003         0.197±0.004
+          Focal                        0.200         0.206              0.207              0.195           0.200               0.189
+          CB                           0.199         0.201              0.199              0.198           0.200               0.202
+          MAML                         0.200         0.200              0.198              0.197           0.202               0.195
+      Table 2: 5-way few-shot accuracy on three ADIBench datasets. Values for LPA-ProtoNet, SCP-ProtoNet, ProtoNet,
+      FineTune and MatchingNet are mean±std over 4 seeds (0, 7, 42, 123); the remaining rows use seed 42. Macro-F1
+      (mean over the 6 cells): SCP-LPA 0.60, SCP 0.60, LPA-ProtoNet 0.57, ProtoNet 0.57, FineTune 0.12. Full per-cell
+      Macro-F1 in Appendix Table A.5. All fine-tuning methods (FineTune, Focal, CB, MAML) collapse to chance
+      (0.20) on all three datasets. Metric-learning methods (ProtoNet, MatchingNet, RelationNet) maintain 0.35–0.60.
+      LPA-ProtoNet and SCP-ProtoNet alone win on all 6 cells; their combination (SCP-LPA) matches the better single
+      variant on 5 of 6 cells. A learned-anchor variant (SoftAnchor) does not beat hard LPA and is reported in the appendix
+      as a negative finding.
+
+                                                  NADI 18                NADI 5            Amgadhasan 5              mean ∆
+                     Variant                   1-shot      5-shot   1-shot        5-shot   1-shot    5-shot     vs. ProtoNet
+                     ProtoNet (baseline)       0.388       0.540    0.501         0.674    0.576     0.764             —
+                     SCP only                  0.438       0.547    0.518         0.686    0.649     0.784           +0.031
+                     LPA only                  0.418       0.544    0.536         0.686    0.669     0.781           +0.036
+                     LDAM only (class freq)    0.405       0.519    0.491         0.649    0.612     0.768           −0.026
+                     Prior only (class freq)   0.389       0.507    0.454         0.622    0.556     0.733           −0.084
+                     SCP + LPA (full)          0.416       0.547    0.532         0.686    0.641     0.785           +0.031
+                     SCP + LDAM + prior        0.405       0.519    0.491         0.649    0.612     0.768           −0.026
+      Table 3: Ablation on ADIBench (seed 42). Right column shows the mean ∆ across all 6 cells vs. ProtoNet.
+      SCP gains +0.031 on average; LPA gains +0.036 on average. The mechanisms exhibit distinct specialisations:
+      SCP is best on NADI 18 (country-level), LPA is best on amgadhasan (city-level). Generic class-frequency-aware
+      mechanisms (LDAM, prior) hurt on average, demonstrating that domain-specific inductive bias is essential for
+      long-tail ADI.
+
+
+337   to predicting whichever class the encoder happens                   removes a secondary source of noise even for a                 354
+338   to favour a priori (the majority). The long-tail is                 metric learner. The collapse of fine-tune is there-            355
+339   a compounding factor rather than the root cause—                    fore not an artefact of class imbalance; it is a direct        356
+340   even a balanced few-shot fine-tuner would strug-                    consequence of the 5-shot support size being too               357
+341   gle with 5-shot support—which is precisely why                      small for cross-entropy to learn a stable decision             358
+342   metric learning, which only needs to place a proto-                 boundary.                                                      359
+343   type at the support’s centroid, is the right inductive                 Support-size sweep. Confirming Finding 1                    360
+344   bias for ADI. We directly tested this with a class-                 is not a small-k artefact, we swept k over                     361
+345   balanced subset of NADI 18 (500 rows per class,                     {1, 3, 5, 10, 20} on NADI 18 (seed 42; Appendix                362
+346   total 9000 rows, 1:1 class ratio (fully balanced set-               Figure A.1): FineTune stays at chance (0.199–                  363
+347   ting)) using the same 5-way k-shot protocol. Fine-                  0.204) at every support size, while ProtoNet rises             364
+348   tune still collapses to chance accuracy (0.200 at 1-                monotonically (0.401→0.611). Even twenty la-                   365
+349   shot, 0.195 at 5-shot; Appendix Table A.4), statisti-               belled examples per class do not stabilise the                 366
+350   cally indistinguishable from the imbalanced corpus                  fine-tuned decision boundary—direct evidence that              367
+351   (0.203/0.207). ProtoNet, in contrast, improves on                   support-size starvation, not class imbalance, is the           368
+352   the balanced corpus (0.431/0.692 vs. 0.388/0.540                    dominant driver.                                               369
+353   on imbalanced), because removing the long-tail                         Finding 2: SCP and LPA both fix the col-                    370
+
+
+                                                                     5
+                                                                               FineTuneby training
+                                               Per-class accuracy on NADI 18 (sorted                size)
+                                                                                              ProtoNet          SCP-LPA (ours)
+                               1.00                                                                                                  the encoder clusters, LPA’s prototype smoothing          410
+                               0.75
+                                                                                                                                     starts to act as mild over-regularisation on already-    411
+       5-way 5-shot accuracy
+
+
+
+                                                                                                                                     well-separated classes, removing some of the fine-       412
+                               0.50
+                                                                                                                                     grained dialectal signal that the clustering just re-    413
+                               0.25   chance                                                                                         covered. This is a meaningful negative result: it        414
+                               0.00                                                                                                  tells practitioners that a one-line, test-time-only      415
+                                      (55 EG
+
+                                      (42 PL
+
+                                      (40 KW
+
+
+
+                                      (29 QA
+
+                                      (26 JO
+
+                                      (26 LB
+
+                                      (25 SA
+
+                                      (25 AE
+
+                                      (25 BH
+
+                                      (18 OM
+
+                                      (15 SY
+
+                                      (15 DZ
+
+                                      (14 IQ
+
+                                      (13 SD
+
+                                      (11 MA
+
+                                       (9k YE
+
+                                       (8k TN
+                                      (35 LY
+
+
+
+
+                                                                                                                                     change (LPA) is as effective as re-training the en-
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                         k)
+
+                                          )
+
+                                          )
+                                                                                                                                                                                              416
+                                       Majority classes (top-9, 18K tweets)       Minority classes (bot-9, < 18K tweets)
+                                                                                                                                     coder (SCP), at a fraction of the cost. The spe-         417
+      Figure 4: Per-class accuracy on NADI 18 (sorted by                                                                             cialisation we see is consistent with this framing:      418
+      class size), 5-way 5-shot, seed 42. Three panels show
+                                                                                                                                     SCP helps most on NADI 18 (many classes, large           419
+      results of FineTune, ProtoNet and SCP-LPA (ours) re-
+      spectively. The shaded background separates majority                                                                           intra-class variance—an encoder problem), while          420
+      classes (top-9, > 18K tweets) from minority classes                                                                            LPA helps most on the small amgadhasan corpus            421
+      (bottom-9, < 18K tweets). SCP-LPA beats ProtoNet                                                                               (noisy prototypes from 1-shot support—a prototype        422
+      on every class; the gap is largest on the smallest classes.                                                                    problem).                                                423
+                                                                                                                                        Finding 3: ProtoNet significantly outperforms         424
+                                                                                                                                     MatchingNet at 5-shot. We ran a paired bootstrap         425
+371   lapse, but do not stack. Table 3 shows the ab-
+                                                                                                                                     significance test on 200 episodes per cell. ProtoNet     426
+372   lation. SCP gains a mean of +0.031 across the
+                                                                                                                                     wins on all 6 cells; the gap is statistically signif-    427
+373   6 cells; LPA gains +0.036. The mechanisms do
+                                                                                                                                     icant (paired bootstrap p < 0.001) on NADI 18            428
+374   not combine additively: SCP-LPA matches the bet-
+                                                                                                                                     5-shot, NADI 5 5-shot, and both amgad cells. The         429
+375   ter single-component variant on 5 of 6 cells and
+                                                                                                                                     non-significant cells (NADI 1-shot) show near-zero       430
+376   is slightly below it on the remaining one (NADI
+                                                                                                                                     differences. The pattern is mechanistically natural:     431
+377   18 1-shot: 0.416 vs. 0.425 for SCP alone). We ex-
+                                                                                                                                     with more support examples the class centroid be-        432
+378   plain this by separating the two mechanisms’ error
+                                                                                                                                     comes a reliable estimator, and simple Euclidean         433
+379   sources. SCP fixes the encoder. Supervised con-
+                                                                                                                                     distance to a mean prototype outperforms cosine-         434
+380   trastive pre- training reshapes the encoder’s geom-
+                                                                                                                                     attention matching over individual support points.       435
+381   etry so that same-class embeddings cluster tightly
+                                                                                                                                     At 1-shot, both methods suffer from the same noisy       436
+382   and different-class embeddings are pushed apart;
+                                                                                                                                     single-example prototype, so the gap collapses.          437
+383   the residual error after SCP is therefore dominated
+384   by encoder-side problems—rare-class features that                                                                                 Finding 4: Cross-corpus transfer reveals a            438
+
+385   the encoder still encodes noisily. LPA fixes the                                                                               limit of LPA. 5-way 5-shot cross-corpus transfer         439
+
+386   prototype estimate. Linguistic-prior aggregation                                                                               (seed 42, 200 episodes; per-cell std ≈ 0.01): train      440
+
+387   shrinks a noisy 1- or 5-shot prototype towards its                                                                             on NADI 18, evaluate few-shot on amgadhasan              441
+
+388   linguistic neighbours, so the residual error after                                                                             5. ProtoNet achieves an accuracy of 0.670, SCP           442
+
+389   LPA is dominated by prototype-side problems—                                                                                   achieves 0.705 (+0.035), and LPA achieves 0.698          443
+
+390   high-variance prototypes caused by sparse sup-                                                                                 (+0.028). Two observations follow. First, both           444
+
+391   port. The two mechanisms operate on different                                                                                  SCP and LPA transfer positively to an unseen cor-        445
+
+392   objects (encoder representation vs. class centroid)                                                                            pus, confirming the findings are not NADI-specific.      446
+
+393   but both target the same downstream symptom                                                                                    Second, SCP transfers better than LPA, and SCP-          447
+
+394   (minority-class feature collapse). When they are                                                                               LPA does not improve over SCP alone. The rea-            448
+
+395   combined, each corrects a portion of the total error                                                                           son is expected: LPA’s distance matrix is built for      449
+
+396   that the other leaves untouched, so the marginal                                                                               NADI’s 18 country dialects, whose clusters do not        450
+
+397   gain of the second mechanism is small. We verified                                                                             align one-to-one with amgadhasan’s 5 city labels,        451
+
+398   this is not an artefact of suboptimal hyperparame-                                                                             so the prior is partially mis-specified on the target.   452
+
+399   ters: we swept α ∈ {0.3, 0.5, 0.7, 0.9} and τling ∈                                                                            This is a faithful characterisation of LPA’s inductive   453
+
+400   {0.3, 0.5, 1.0} for the combined SCP-LPA model                                                                                 bias—it is a corpus-specific prior, whereas SCP is       454
+
+401   and found no configuration that exceeded the best                                                                              a corpus-agnostic objective.                             455
+
+402   single-component variant. The SupCon loss weight                                                                                  The pattern reproduces with a second Arabic           456
+403   and temperature were held at β=0.5, τ =0.07 fol-                                                                               encoder: under MARBERT, FineTune still col-              457
+404   lowing Khosla et al. (2020), since SCP’s contribu-                                                                             lapses (0.204) while ProtoNet (0.778/0.863) and          458
+405   tion is concentrated in the encoder representation—                                                                            SCP-LPA (0.809/0.872) are stronger than under            459
+406   not in the prototype layer where LPA acts—and                                                                                  AraBERT, so the failure is not an artefact of en-        460
+407   varying them does not change LPA’s mechanism.                                                                                  coder quality (Appendix Table A.7).                      461
+408   The slight drop we observe on NADI 18 1-shot is                                                                                   The reverse transfer (amgadhasan→NADI-5)              462
+409   consistent with this view: once SCP has tightened                                                                              corroborates the prior-specificity claim from the        463
+
+
+                                                                                                                                 6
+464   other side: carrying the source city prior onto                                        5-way 1-shot acc. (seed 42)
+
+465   coarse-group episodes changes the result by                      Dataset      none    random uniform corpus linguistic
+
+466   ≤0.003 (0.4917 vs. 0.4915 at 5-shot), i.e. it con-               NADI 18      0.391   0.395     0.400    0.407       0.401
+                                                                       NADI 5       0.480   0.507     0.505    0.484       0.501
+467   tributes nothing once label semantics mismatch,                  amgadhasan 5 0.574   0.570     0.574    0.574       0.593
+468   and overall transfer remains hard for every method          Table 4: Prior-quality ablation (CE-trained ProtoNet,
+469   (0.37–0.52; Appendix Table A.8).                            500 episodes).
+470      Finding 5: Robustness checks confirm the                 Mean ∆ vs. none: random +0.009, uniform +0.011,
+471   win. Multi-seed (4 seeds: 0, 7, 42, 123) shows              corpus +0.007, linguistic +0.017 (the only one that
+472   SCP and LPA both beat ProtoNet on all 6 cells               never hurts). Any aggregation helps at 1-shot, where a
+                                                                  single support example yields a high-variance prototype;
+473   with mean ∆ = +0.027 and +0.028, σ ≤
+                                                                  the linguistic prior’s advantage is largest on amgadhasan,
+474   0.013. LPA sensitivity sweep over (α, τling ) ∈             the smallest corpus. We note honestly that on NADI 5
+475   {0.3, 0.5, 0.7, 0.9} × {0.3, 0.5, 1.0} shows the best       the random and uniform matrices slightly outperform
+476   configuration is (α=0.7, τling =0.5), matching our          the linguistic one.
+477   defaults. FineTune on the full 439K NADI 18
+478   tweets (full-supervision, 18-class closed-set classi-       from generic prototype smoothing rather than from                516
+479   fication) reaches overall accuracy 0.38 and Macro-          the dialectological content of the matrix. We test               517
+480   F1 0.38 (per-class F1 0.04–0.80); task granularity          this by replacing the linguistic matrix with two                 518
+481   here differs from the few-shot main results above,          baselines that carry no dialectal signal: (i) a uni-             519
+482   which are 5-way episodes. Re-using the same fully-          form matrix (every sibling weighted equally), and                520
+483   supervised encoder with a nearest-prototype 5-way           (ii) a random symmetric matrix. All three are                    521
+484   1-shot evaluation protocol only reaches 0.43 accu-          row-normalised and used with the same α=0.7.                     522
+485   racy, on par with our episodic SCP-ProtoNet (0.44).         Table 4 reports the result. A fourth, corpus prior—              523
+486   Even with 439K labels and the easier closed-set             class word-frequency centroids of the same tweets                524
+487   18-way task, full supervision does not match our            (≤1500 per class, top-3000 vocabulary, τ =0.5)—                  525
+488   episodic 5-way few-shot result. Full-data supervi-          gains only +0.007 on average, less than uniform                  526
+489   sion is neither necessary nor sufficient for few-shot       smoothing (+0.011) and far less than the expert                  527
+490   ADI. For scale, the official NADI-2024 overview             matrix (+0.017); it helps only on fine-grained                   528
+491   reports macro-F1 of 45.1 for its strongest baseline         NADI 18 (+0.016) and is flat elsewhere. Class-                   529
+492   and 50.6 for the winning system, but under a multi-         conditioned corpus signal is therefore not sufficient:           530
+493   label formulation on a different test set, so we cite       what matters is genuine dialectological structure.               531
+494   these only as an order-of-magnitude reference for
+495   full supervision (Abdul-Mageed et al., 2024).                  Three conclusions follow. First, aggregation                  532
+                                                                  per se helps at 1-shot: all three priors beat “none”             533
+
+496   7   Why does LPA help? A quantitative                       on average, because a single support example                     534
+                                                                  yields a noisy prototype and aggregation reduces its             535
+497       justification
+                                                                  variance. Second, the linguistic prior has the high-             536
+498   LPA assumes that linguistically related dialects            est mean gain and is the only one that never hurts,              537
+499   have similar AraBERT features. If this holds, bor-          supporting our claim that dialectological struc-                 538
+500   rowing prototypes from related classes is a useful          ture carries real signal beyond arbitrary smooth-                539
+501   regularisation rather than a source of noise. Fig-          ing. Third, the prior’s benefit is largest where the             540
+502   ure 5 verifies the assumption directly on NADI              paper claims it should be—on the smallest, nois-                 541
+503   18: we encode 200 tweets per class with the                 iest corpus (amgadhasan, +0.018, where random                    542
+504   frozen AraBERT encoder, compute the centroid                and uniform hurt)—and essentially drops away at                  543
+505   of each class, and measure the Spearman correla-            5-shot, where prototypes are already stable. We                  544
+506   tion between pairwise feature distances and pair-           report the honest caveat that on NADI 5 the linguis-             545
+507   wise linguistic distances. The correlation (ρ=0.40,         tic matrix is slightly worse than a uniform prior                546
+508   p < 2 × 10−13 ) is strong and highly significant,           (0.501 vs. 0.505), consistent with the 5-way coarse              547
+509   which means that the similarity-weighted proto-             labels being a summary of the 18-way dialectology                548
+510   type aggregation in Eq. 3 is doing what it was de-          and thus carrying less fine-grained structure to ex-             549
+511   signed to do: leaning on related classes’ prototypes        ploit. We add a further observation: on the 5-way                550
+512   amounts to a sensible regularisation rather than            coarse NADI task the five macro-groups (Khaleeji,                551
+513   overfitting to noise.                                       Iraqi, Levantine, Masri, Maghrebi) are already well              552
+                                                                  separated in feature space, so the fine-grained di-              553
+514   Is it the linguistic structure, or any smoothing?           alectological detail that LPA encodes adds little                554
+515                                            555 come
+      A natural objection is that LPA’s gain might                signal there, while a uniform prior acts as stronger
+
+                                                              7
+                                                               AraBERT features align with Arabic dialectology
+                                                                     (Spearman = 0.404, p < 2e-13)
+                                                              Inter-cluster (n=162)
+                                                 0.8          Intra-cluster (n=144)
+                                                              Median slope = 0.33
+          Linguistic distance (Versteegh 2006)
+
+
+
+                                                 0.7
+
+                                                 0.6
+
+                                                 0.5
+
+                                                 0.4
+
+                                                 0.3
+
+                                                 0.2
+
+                                                 0.1
+
+                                                       0.75       1.00       1.25     1.50          1.75        2.00       2.25       2.50
+                                                                                 AraBERT feature distance
+      Figure 5: Feature-vs-linguistic distance scatter plot. Each point is one (classi , classj ) pair (excluding diagonal).
+      Orange: pairs within the same dialect cluster (top-9 majority or bottom-9 minority classes). Blue: pairs across
+      clusters. The clear positive correlation (Spearman ρ = 0.40, p < 2 × 10−13 ) means that AraBERT-learned feature
+      geometry already respects Arabic dialectology, which is exactly the prior that LPA’s prototype aggregation is
+      designed to exploit.
+
+
+556   generic regularisation for the noisy 1-shot proto-                                         single protocol. Three findings emerge (§6): all       575
+557   types. This is consistent with—and reinforces—the                                          fine-tuning methods collapse to chance on every di-    576
+558   paper’s central claim: LPA’s value is tied to the                                          alect (support-size starvation, not class imbalance,   577
+559   availability of meaningful fine-grained linguistic                                         is the dominant driver); SCP and LPA each recover      578
+560   structure, which is exactly what the 18-way task                                           ∼3 pp over ProtoNet but do not stack; and the          579
+561   provides and the coarse task does not.                                                     linguistic prior beats uniform and corpus-statistics   580
+                                                                                                 priors on average. We recommend LPA over SCP           581
+562   SoftAnchor ablation. We tried replacing the                                                in low-resource deployment: it adds one N ×N ma-       582
+563   hard-coded dialect matrix with a learned matrix                                            trix multiply per episode (324 FLOPs for N =18)        583
+         learned = exp(−∥e −e ′ ∥/τ
+      Wc,c
+564         ′              c   c      ling ) regularised by a                                    with zero re-training, matching SCP’s gain.            584
+565   Frobenius anchor loss ∥W  learned −W expert ∥2F . With
+566   only 500 training episodes and ≤ 200 tweets per
+                                                                                                 Future work. Three directions: (i) extend to           585
+567   dialect class, the learned ec embeddings do not
+                                                                                                 other Arabic encoders (MARBERT, AraELEC-               586
+568   converge; this achieves worse accuracy than hard-
+                                                                                                 TRA, Jais); (ii) scale LPA to continua without         587
+569   coded LPA on 4 of 6 cells. With more training data
+                                                                                                 curated matrices by learning the prior from un-        588
+570   this may improve.
+                                                                                                 labelled tweets (e.g., subword-distribution cosine);   589
+
+571   8              Conclusion                                                                  (iii) benchmark against instruction-tuned LLMs         590
+                                                                                                 (GPT-4o, Jais-30B). GPT-4o and Jais could not          591
+572   We presented ADIBench, a unified few-shot ADI                                              be run directly: GPT-4o’s API rate limits are in-      592
+573                                           city-level
+      benchmark across country, regional, and 593                                                compatible with batched non-interactive evaluation
+      granularity, and evaluated eight methods594under a                                         under574our institutional agreement, and Jais-30B
+
+                                                                                             8
+                                                 LPA sensitivity (NADI 18 5-way 1-shot seed 42)
+                                                                                                    0.44
+                                                                                                                             identification; (iii) minority-class collapse (Find-       627
+                                         = 0.3   0.373                 0.400
+                                                                         best              0.414    0.43
+                                                                                                                             ing 1) is a fairness issue as well as a technical one,     628
+             (weight of raw prototype)
+                                                                                                    0.42
+
+                                         = 0.5   0.402                 0.399               0.418
+                                                                                                                             disproportionately mislabelling under-represented
+
+
+
+
+                                                                                                       5-shot accuracy
+                                                                                                    0.41
+                                                                                                                                                                                        629
+                                                                                                    0.40
+
+                                         = 0.7   0.427                0.436                0.415    0.39                     speakers. LPA partly mitigates (iii) by leverag-           630
+                                                                                                    0.38
+
+                                         = 0.9   0.431                 0.419               0.427    0.37
+                                                                                                                             ing dialectological structure rather than class fre-       631
+
+                                                   = 0.3                  = 0.5             = 1.0
+                                                                                                    0.36                     quency.                                                    632
+                                                             linguistic temperature ling
+
+      Figure 6: LPA sensitivity parameter sweep (Fig-                                                                        Acknowledgments                                            633
+      ure 6) on NADI 18 5-way 1-shot (seed 42). We sweep
+      α ∈ {0.3, 0.5, 0.7, 0.9} (trust in the raw prototype) and                                                              We thank the NADI shared task organizers and the           634
+      τling ∈ {0.3, 0.5, 1.0} (sharpness of the dialectal ag-                                                                amgadhasan dataset curators for making their data          635
+      gregation). The configuration (α=0.7, τling =0.5) that                                                                 publicly available.                                        636
+      we use in the main table is also the best configura-
+      tion (0.436), validating our defaults. We did not re-
+      sweep α/τling on NADI 5 or amgadhasan; the main-                                                                       References                                                 637
+      table defaults are shared across datasets for simplic-
+      ity, and cell-level ablations on those datasets (Table 2)                                                              Abdelrahman Abdelrahman, Mohamed Rezk, and                 638
+      show that LPA’s gain over no-prior is largest exactly                                                                    White Mark. 2020. Qadi: Automatically collected          639
+      where the linguistic structure is informative (NADI 18,                                                                  dataset for arabic dialect identification. In Proceed-   640
+      +0.018; amgadhasan, +0.018), consistent with our de-                                                                     ings of LREC 2020.                                       641
+      faults being close to optimal in those settings too.
+                                                                                                                             Muhammad Abdul-Mageed, Mona T. El-Madany, and              642
+                                                                                                                              Benjamin Duppenthaler. 2021. Marbert: Deep bert           643
+595   weights are gated behind an unfilled access appli-                                                                      pretraining for arabic. In Proceedings of EMNLP           644
+596   cation. We use the TF-IDF 1-shot proxy as a repro-                                                                      2021.                                                     645
+597   ducible lower-bound stand-in, not a serious LLM
+598   baseline. Reproducing our Table 2 with GPT-4o /                                                                        Muhammad Abdul-Mageed, Amr Keleg, AbdelRahim               646
+                                                                                                                              Elmadany, Chiyu Zhang, Injy Hamed, Walid Magdy,           647
+599   Jais is a clear next step.
+                                                                                                                              Houda Bouamor, and Nizar Habash. 2024. Nadi               648
+                                                                                                                              2024: The fifth nuanced arabic dialect identification     649
+600   9    Limitations                                                                                                        shared task. In Proceedings of the Second Arabic          650
+                                                                                                                              Natural Language Processing Conference, Miami,            651
+601   Method-level limitations. Beyond the resource                                                                           USA (Hybrid).                                             652
+602   constraints above, three limitations are inherent to
+603   the method itself. (i) LPA depends on an exter-                                                                        Mohamed Al-Badrashiny, Salma Elmadany, and Abd-            653
+604   nal dialectological prior; for low-resource dialect                                                                     ulelah Al-Hagree. 2024. The fifth nadi workshop           654
+                                                                                                                              on arabic dialect identification. In Proceedings of       655
+605   continua without such scholarship the prior must
+                                                                                                                              ArabicNLP 2024.                                           656
+606   be hand-built or replaced by the (weaker) learned
+607   variant described above, so LPA does not transfer                                                                      amgadhasan. 2026.        Arabic tweets dialect cor-        657
+608   freely to every language. (ii) Beyond AraBERT,                                                                           pus          (amgadhasan/arabic_tweets_dialects).        658
+609   the core pattern reproduces with MARBERT: Fine-                                                                          https://huggingface.co/datasets/                         659
+                                                                                                                               amgadhasan/arabic_tweets_dialects.          Hug-         660
+610   Tune still collapses while the metric-learning gains                                                                     ging Face dataset, accessed 2026.                        661
+611   persist (Appendix Table A.7); wider encoder cover-
+612   age remains future work. (iii) The two mechanisms                                                                      Anonymous. 2024. Dialect-aware contrastive debias-         662
+613   have asymmetric deployment cost: LPA is test-                                                                            ing for arabic dialect identification under extreme      663
+                                                                                                                               class imbalance. Authors’ prior workshop draft; re-      664
+614   time-only and free, whereas SCP requires a full                                                                          ports the 7000:1 failure-mode finding extended in §6.    665
+615   encoder re-training, so SCP is inappropriate when                                                                        Submitted to ACL 2024.                                   666
+616   only the encoder weights are available pre-trained
+617   and no training budget exists.                                                                                         Wissam Antoun, Fady Baly, and Hazem Hajj. 2020.            667
+                                                                                                                              Arabert: Transformer-based model for arabic lan-          668
+618   10    Ethical Considerations                                                                                             guage understanding. In Proceedings of LREC 2020.        669
+
+                                                                                                                             Houda Bouamor, Nizar Habash, Mohammad Salameh,             670
+619   ADI has surveillance and profiling implications;                                                                         Wajdi Zaghouani, Owen Rambow, Diab Mandil, Sara          671
+620   deployed dialect-ID systems can be used to in-                                                                           Althobaiti, and Kemal Oflazer. 2019. Madar: A large-     672
+621   fer a speaker’s region or social group from text                                                                         scale arabic multi-dialect dataset. In Proceedings of    673
+622   alone. We use only public datasets (NADI 2024,                                                                           LREC 2019.                                               674
+623   amgadhasan) and acknowledge three limitations:
+                                                                                                                             Kaidi Cao, Colin Wei, Adrien Gaidon, Nikos Arechiga,       675
+624   (i) tweet-level corpora over-represent young, ur-                                                                        and Tengyu Ma. 2019. Learning imbalanced datasets        676
+625   ban, male demographics; (ii) dialect labels reflect                                                                      with label-distribution-aware margin. In Proceedings     677
+      academic categorisation rather than speakers’ self-                                                                          626 2019.
+                                                                                                                               of ICLR                                                  678
+
+
+                                                                                                                         9
+679   Yin Cui, Menglin Jia, Tsung-Yi Lin, Yang Song, and
+680     Serge Belongie. 2019. Class-balanced loss based
+681     on effective number of samples. In Proceedings of
+682     CVPR 2019.
+683   Chelsea Finn, Pieter Abbeel, and Sergey Levine. 2017.
+684     Model-agnostic meta-learning for fast adaptation to
+685     new domains. In Proceedings of ICML 2017.
+686   Nizar Y. Habash. 2010. Introduction to arabic natural
+687     language processing. Synthesis Lectures on Human
+688     Language Technologies, 3(1):1–187.
+689   Prannay Khosla, Piotr Teterwak, Chen Wang, Aaron
+690     Sarna, Yonglong Tian, Phillip Isola, Aaron
+691     Maschinot, Ce Liu, and Dilip Krishnan. 2020. Su-
+692     pervised contrastive learning. In Proceedings of
+693     NeurIPS 2020.
+694   Tsung-Yi Lin, Priya Goyal, Ross Girshick, Kaiming He,
+695     and Piotr Dollár. 2017. Focal loss for dense object
+696     detection. In IEEE Transactions on Pattern Analysis
+697     and Machine Intelligence.
+698   Jake Snell, Kevin Swersky, and Richard Zemel. 2017.
+699     Prototypical networks for few-shot learning. In Pro-
+700     ceedings of NeurIPS 2017.
+701   Flood Sung, Yongxin Yang, Li Zhang, Tao Xiang,
+702     Philip H.S. Torr, and Timothy M. Hospedales. 2018.
+703     Learning to compare: Relation network for few-shot
+704     learning. In Proceedings of the IEEE Conference on
+705     Computer Vision and Pattern Recognition.
+      Kees Versteegh. 2006. The arabic language in europe.           706
+        In UNESCO Interactive Encyclopedia of Linguistic             707
+        Diversity.                                                   708
+
+      Oriol Vinyals, Charles Blundell, Timothy Lillicrap, Ko-        709
+        ray Kavukcuoglu, and Daan Wierstra. 2016. Match-             710
+        ing networks for one shot learning. In Advances in           711
+        Neural Information Processing Systems.                       712
+
+
+
+
+                                                                10
+

@@ -1,0 +1,10 @@
+{
+  "bal_ft_1shot": 0.20026666666666668,
+  "bal_pn_1shot": 0.43133333333333335,
+  "imb_ft_1shot": 0.203,
+  "imb_pn_1shot": 0.388,
+  "bal_ft_5shot": 0.1948,
+  "bal_pn_5shot": 0.6918666666666666,
+  "imb_ft_5shot": 0.207,
+  "imb_pn_5shot": 0.54
+}

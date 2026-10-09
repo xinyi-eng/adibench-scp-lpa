@@ -1,0 +1,98 @@
+[
+  {
+    "method": "protonet",
+    "dataset": "nadi_18",
+    "acc": 0.5208,
+    "ece": 0.11957633813222247,
+    "brier": 0.6064313054084778,
+    "acc_noisy": 0.44866666666666666
+  },
+  {
+    "method": "protonet",
+    "dataset": "nadi_5",
+    "acc": 0.6469333333333334,
+    "ece": 0.08943273386955262,
+    "brier": 0.498605340719223,
+    "acc_noisy": 0.5644
+  },
+  {
+    "method": "protonet",
+    "dataset": "amgadhasan_5",
+    "acc": 0.7225333333333334,
+    "ece": 0.06544645032485324,
+    "brier": 0.3869366943836212,
+    "acc_noisy": 0.6236
+  },
+  {
+    "method": "scp_lpa",
+    "dataset": "nadi_18",
+    "acc": 0.5156,
+    "ece": 0.057142623535792025,
+    "brier": 0.5953575968742371,
+    "acc_noisy": 0.44293333333333335
+  },
+  {
+    "method": "scp_lpa",
+    "dataset": "nadi_5",
+    "acc": 0.6516,
+    "ece": 0.14868517839908602,
+    "brier": 0.5182231664657593,
+    "acc_noisy": 0.5674666666666667
+  },
+  {
+    "method": "scp_lpa",
+    "dataset": "amgadhasan_5",
+    "acc": 0.7428,
+    "ece": 0.10765460158189133,
+    "brier": 0.3886461555957794,
+    "acc_noisy": 0.6352
+  },
+  {
+    "method": "lpa_protonet",
+    "dataset": "nadi_18",
+    "acc": 0.48933333333333334,
+    "ece": 0.04163223389784495,
+    "brier": 0.6119106411933899,
+    "acc_noisy": 0.4424
+  },
+  {
+    "method": "lpa_protonet",
+    "dataset": "nadi_5",
+    "acc": 0.6573333333333333,
+    "ece": 0.15673189042806623,
+    "brier": 0.5182694792747498,
+    "acc_noisy": 0.5672
+  },
+  {
+    "method": "lpa_protonet",
+    "dataset": "amgadhasan_5",
+    "acc": 0.7348,
+    "ece": 0.11599742149511974,
+    "brier": 0.39393386244773865,
+    "acc_noisy": 0.6338666666666667
+  },
+  {
+    "method": "finetune",
+    "dataset": "nadi_18",
+    "acc": 0.20186666666666667,
+    "ece": 0.012830157883961996,
+    "brier": 0.8003478050231934,
+    "acc_noisy": 0.2024
+  },
+  {
+    "method": "finetune",
+    "dataset": "nadi_5",
+    "acc": 0.20053333333333334,
+    "ece": 0.013251465646425875,
+    "brier": 0.8003984093666077,
+    "acc_noisy": 0.20226666666666668
+  },
+  {
+    "method": "finetune",
+    "dataset": "amgadhasan_5",
+    "acc": 0.19866666666666666,
+    "ece": 0.016650433619817107,
+    "brier": 0.8009836077690125,
+    "acc_noisy": 0.20333333333333334
+  }
+]

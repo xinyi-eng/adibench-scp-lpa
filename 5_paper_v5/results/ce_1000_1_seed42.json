@@ -1,0 +1,22 @@
+{
+  "method": "ce",
+  "ratio": "1000_1",
+  "seed": 42,
+  "epochs": 1,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 0.06857034554041266,
+      "macro_f1": 0.017914709404071104,
+      "f1_Khaleji": 0.06576402321083172,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.023809523809523808,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0,
+      "elapsed_s": 59.80319881439209,
+      "n_train": 4518,
+      "n_val": 502
+    }
+  ],
+  "total_time_s": 59.80419874191284
+}

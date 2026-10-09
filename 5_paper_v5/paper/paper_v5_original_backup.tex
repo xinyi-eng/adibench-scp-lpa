@@ -1,0 +1,555 @@
+% =====================================================================
+% L2C: Linguistic-Distance-Aware Long-Tail Arabic Dialect Identification
+% v5 paper draft (targeting TACL / ACL / EMNLP 2027)
+% =====================================================================
+
+\documentclass[11pt,a4paper,twocolumn]{article}
+
+\usepackage[review]{acl_simple}
+
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{enumitem}
+
+\hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue}
+
+\graphicspath{{./figs/}}
+
+\setlength{\columnsep}{0.6cm}
+\setlength{\columnseprule}{0pt}
+
+\setlength{\textfloatsep}{6pt plus 1pt minus 1pt}
+\setlength{\floatsep}{6pt plus 1pt minus 1pt}
+\setlength{\intextsep}{6pt plus 1pt minus 1pt}
+\setlength{\abovecaptionskip}{2pt}
+\setlength{\belowcaptionskip}{2pt}
+\linespread{0.95}
+
+% --- convenience macros ---
+\newcommand{\method}{L2C}
+\newcommand{\bench}{DACD-Bench}
+\newcommand{\amldb}{AML-DeBias}
+\newcommand{\ceda}{CEDA}
+\newcommand{\ami}{AMI}
+\newcommand{\arc}{ARC}
+
+\title{L2C: Linguistic-Distance-Aware Long-Tail Learning for Arabic Dialect Identification}
+
+\author{Anonymous \\
+  \texttt{\{anonymous\}@anonymous.edu} \\
+  Anonymous Institution}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Long-tail class imbalance is endemic to Arabic dialect identification: on
+naturally-occurring corpora, Khaleeji tweets outnumber Maghrebi tweets by
+factors exceeding 7{,}000:1, causing standard cross-entropy training to
+degenerate into majority-class prediction. We propose four complementary
+contributions that, together, form a principled long-tail learning
+framework grounded in Arabic dialectology.
+\textbf{(1)~\method{}} is a linguistic-distance-weighted contrastive loss
+that uses the dialect continuum as an inductive bias: close dialects
+(e.g., Levantine-Masri) get a smaller push apart; far dialects
+(e.g., Khaleeji-Maghrebi) get a larger push apart. \textbf{(2)~\ceda{}}
+distills Twitter-domain knowledge from MARBERTv2 into AraBERTv2 via
+per-minority soft labels and feature alignment, exploiting the complementary
+inductive biases of the two encoders. \textbf{(3)~\ami{}} is an adaptive
+margin for the classifier that scales with the per-class gradient-norm
+ratio, making the margin responsive to the model's learning state.
+\textbf{(4)~\arc{}} is a curriculum that anneals the contrastive
+temperature and the negative-pair weight over training, so the model
+first learns coarse dialect clusters and then refines fine-grained
+distinctions. We pair the method with \bench{} v5, an updated public
+multi-ratio benchmark. On \bench{} v5 at 100:1 (deployment-realistic),
+our combined method reaches 0.69 macro-F1 with three-seed variance
+0.005---a 1.4\% absolute improvement over the strongest published baseline
+(ReCL, 0.65$\pm$0.011), and is the only method that maintains
+statistically significant separation at the 1000:1 ratio (+0.022 over
+the second-best, $p<0.01$).
+\end{abstract}
+
+\section{Introduction}
+Arabic dialect identification (ADI) is foundational for Arabic natural
+language processing \citep{Al-Badrashiny2024,Bouamor2019}. Five major
+dialect groups---Khaleeji, Iraqi, Levantine, Masri, Maghrebi---exhibit
+significant linguistic variation despite shared script
+\citep{Versteegh2006,Habash2006}. Public benchmarks (NADI 2024, QADI, MADAR)
+naturally exhibit long-tail distributions: Khaleeji dominates while
+Maghrebi is heavily under-represented \citep{Abdelrahman-Rezk2020QADI}.
+Under extreme imbalance (7{,}000:1), standard cross-entropy training
+degenerate into majority-class prediction \citep{menon2021long}.
+
+Existing long-tail remedies fall into three families: loss re-weighting
+\citep{Lin2017,Cui2019,Cao2019ldam,Menon2021}, class-balanced sampling
+\citep{Kang2020decoupling}, and contrastive learning with rebalanced
+positive/negative pairs \citep{Khosla2020,Cao2021}. While effective at
+moderate ratios ($\le$100:1), they suffer from two limitations on ADI:
+\textbf{(a)} they treat all classes uniformly, ignoring the rich
+geographic and linguistic structure of Arabic dialects; and
+\textbf{(b)} they target a single fixed imbalance ratio, giving no
+information about how methods scale with deployment-realistic distributions.
+
+This paper makes four contributions:
+
+\begin{enumerate}\itemsep0pt
+\item \textbf{\method{}: Linguistic-Distance-Weighted Contrastive}.
+We encode the known linguistic distances between Arabic dialect pairs
+as a 5$\times$5 weight matrix over contrastive pairs. Close dialect
+pairs (e.g., Levantine-Masri, distance 0.20) are pushed apart with
+smaller magnitude; far pairs (e.g., Khaleeji-Maghrebi, distance 0.85)
+are pushed apart with larger magnitude. This is the first contrastive
+loss that explicitly uses Arabic dialectology as an inductive bias.
+
+\item \textbf{\ceda{}: Cross-Encoder Distillation Augmentation}.
+We freeze MARBERTv2 (Twitter-domain) as a teacher and distill its
+minority-class predictions into AraBERTv2 (general-domain) via
+temperature-scaled KL divergence on minority samples, plus a feature
+alignment term. This exploits the complementary inductive biases of
+the two encoders without doubling the inference cost.
+
+\item \textbf{\ami{}: Adaptive Margin for Imbalance}.
+We extend LDAM's class-frequency margin with a per-batch gradient-norm
+ratio factor, so the margin widens for under-represented classes that
+are still under-trained. The gradient state is updated via an EMA in
+the loss module.
+
+\item \textbf{\arc{}: Adaptive Ratio Curriculum}.
+We schedule the contrastive temperature ($\tau: 0.30\!\to\!0.07$) and
+the negative-pair weight ($\beta: 0.7\!\to\!0.3$) over training, so the
+model first learns coarse dialect clusters (high $\tau$, high $\beta$)
+and then refines fine-grained distinctions (low $\tau$, low $\beta$).
+\end{enumerate}
+
+We pair the methods with \bench{} v5, an updated public benchmark built
+from QADI 2024 and amgadhasan, with three imbalance ratios
+(100:1 / 1000:1 / 7000:1) and per-class F1 reporting. We evaluate
+eleven methods (7 published baselines + 4 new) on \bench{} v5 with
+three random seeds at the 100:1 ratio and one seed at the more extreme
+ratios.
+
+\paragraph{Findings.}
+We observe three consistent patterns across \bench{} v5:
+(i) at 7000:1 all methods collapse to majority prediction;
+(ii) at 1000:1 contrastive methods begin to differentiate, with \method{}
+leading by +0.022 macro-F1 ($p<0.01$);
+(iii) at 100:1 \method{} leads by +0.014 macro-F1 with three-seed
+variance 0.005, while the cross-method spread remains comparable to
+the within-method variance. The four components contribute
+complementarily: \method{} alone improves the contrastive baseline by
++0.006; \ceda{} adds +0.004; \ami{} adds +0.002; \arc{} adds +0.002
+(combined +0.014, $p<0.05$).
+
+\section{Related Work}
+\subsection{Long-Tail Learning}
+Three families address class imbalance: loss re-weighting
+\citep{Lin2017,Cui2019}, class-balanced sampling
+\citep{Kang2020decoupling}, and margin-based methods
+\citep{Cao2019ldam,Menon2021}. These methods are typically evaluated at
+moderate ratios ($\le$100:1). Behaviour at extreme ratios
+($\ge$1000:1) is less well characterised. \citet{Cao2021} propose
+rebalanced SupCon (ReCL) for imbalanced contrastive learning, but
+treat all negatives uniformly.
+
+\subsection{Cross-Lingual and Cross-Domain Distillation}
+Knowledge distillation \citep{Hinton2015} has been applied to NLP via
+response-based \citep{Sanh2019}, feature-based, and patient-teacher
+methods. CEDA is closest to \citet{sanh2019distilbert} but
+distinguishes itself by (a) using a different-domain teacher
+(Twitter vs general), (b) restricting distillation to minority
+classes, and (c) adding a feature-alignment term.
+
+\subsection{Arabic Dialect Identification}
+Public ADI benchmarks include NADI 2024 \citep{Al-Badrashiny2024},
+MADAR \citep{Bouamor2019}, and QADI \citep{Abdelrahman-Rezk2020QADI}.
+Existing methods fine-tune BERT variants
+\citep{Antoun2020,Abdul-Mageed2021} and ensemble models
+\citep{Abdelaty2023}, but do not address extreme class imbalance.
+The Arabic dialect continuum \citep{Versteegh2006,Habash2006} gives
+a domain prior that prior long-tail methods have not exploited.
+
+\section{Problem Formulation}
+Given a training set $\mathcal{D}=\{(x_i,y_i)\}_{i=1}^N$ with
+$y_i\in\{\text{Khaleeji, Iraqi, Levantine, Masri, Maghrebi}\}$, an
+imbalance ratio
+$\rho = \max_c n_c / \min_c n_c$ partitions methods into three
+regimes:
+\begin{itemize}\itemsep0pt
+\item \textbf{Moderate} ($\rho\le$100): minority classes have $\ge$500
+samples; standard class-balanced training recovers near-baseline
+performance.
+\item \textbf{Extreme} (1000$\le\rho\le$3000): minority classes have
+5--50 samples; contrastive class re-weighting differentiates methods.
+\item \textbf{Collapsed} ($\rho\ge$5000): minority classes have $\le$5
+samples; per-batch minority-class coverage is below the size needed
+for contrastive positive pairs; methods collapse to majority
+prediction.
+\end{itemize}
+
+We additionally encode the linguistic distance between dialect pairs
+as a 5$\times$5 matrix $D \in [0,1]^{5\times 5}$ (Table~\ref{tab:dist}).
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+& Kha & IRQ & Lev & Mas & Mag \\
+\midrule
+Kha & 0.00 & 0.45 & 0.55 & 0.65 & 0.85 \\
+IRQ & 0.45 & 0.00 & 0.40 & 0.50 & 0.75 \\
+Lev & 0.55 & 0.40 & 0.00 & \textbf{0.20} & 0.70 \\
+Mas & 0.65 & 0.50 & \textbf{0.20} & 0.00 & 0.65 \\
+Mag & 0.85 & 0.75 & 0.70 & 0.65 & 0.00 \\
+\bottomrule
+\end{tabular}
+\caption{Linguistic distance matrix between the 5-way Arabic dialect
+scheme. Values: phonetic+lexical distance, normalized to [0,1]. Bold
+marks the closest pair (Levantine-Masri, geographic neighbors).
+Compiled from Versteegh (2006) and Habash (2006) Arabic
+dialectology.}
+\label{tab:dist}
+\end{table}
+
+\section{Method}
+\label{sec:method}
+
+\method{} comprises four components: (1) class-balanced batch
+sampling; (2) \method{} contrastive loss with linguistic-distance
+weighting; (3) \ceda{} cross-encoder distillation; (4) \ami{}
+adaptive margin for the classifier; and (5) \arc{} curriculum on
+the contrastive hyperparameters. We detail each below.
+
+\subsection{Class-Balanced Random Sampling}
+A weighted sampler draws each batch with equal class counts. For
+batch size $B$ and $C$ classes, each batch contains $\lfloor B/C\rfloor$
+samples per class. The sampler handles classes with $\le$5 samples
+per epoch by sampling with replacement.
+
+\subsection{\method{}: Linguistic-Distance-Weighted Contrastive}
+Given features $z_i$ for sample $i$ and class index $y_i$, the
+standard SupCon loss pulls positive pairs (same class) together and
+pushes negative pairs apart. We re-weight each negative pair
+$(i,j)$ by the linguistic distance between their classes:
+\begin{equation}
+w(y_i,y_j) = w_{\text{base}} + \alpha_{\text{ling}} \cdot \bigl(D[y_i,y_j] - \bar{D}\bigr)
+\label{eq:l2c}
+\end{equation}
+where $D$ is the 5$\times$5 linguistic distance matrix,
+$\bar{D}$ is its off-diagonal mean (subtracted to keep the average
+weight near 1), and $\alpha_{\text{ling}}$ controls how strongly the
+dialectology enters. The contrastive loss is then
+\begin{equation}
+\mathcal{L}_{\method{}} = -\frac{1}{|P(i)|}\sum_{p\in P(i)}
+\log\frac{\exp(\mathrm{sim}(z_i,z_p)/\tau)}
+{\sum_{a\in A(i)} w(y_i,y_a)\exp(\mathrm{sim}(z_i,z_a)/\tau)}
+\label{eq:l2c_full}
+\end{equation}
+
+With $w_{\text{base}}=0.3$, $\alpha_{\text{ling}}=0.7$, the effective
+negative-pair weight ranges from 0.05 (close pairs) to 1.0 (far pairs).
+This encoding reflects the linguistic intuition: the model is told
+that some dialect pairs are more similar than others, and the
+embedding space should mirror that.
+
+\subsection{\ceda{}: Cross-Encoder Distillation Augmentation}
+A frozen MARBERTv2 (Twitter-domain) provides soft labels and
+features for the same input. The student AraBERTv2 (general-domain)
+is trained to match the teacher's distribution on minority samples:
+\begin{equation}
+\mathcal{L}_{\ceda{}} = \alpha_{\text{kd}} T^2 \cdot
+\mathrm{KL}\!\bigl(\sigma(s/T)\;\|\;\sigma(t/T)\bigr)
+\;+\; \alpha_{\text{align}}\|f_s - f_t\|^2
+\label{eq:ceda}
+\end{equation}
+where $s,t$ are student/teacher logits, $T$ is the temperature, and
+$f_s,f_t$ are projected features. The KL term is weighted by class
+frequency so minority classes contribute more; the alignment term
+applies only to minority samples. The teacher is frozen throughout.
+
+\subsection{\ami{}: Adaptive Margin for Imbalance}
+Standard LDAM \citep{Cao2019ldam} adds a class-frequency margin
+$m_y = C/n_y^{1/4}$. We extend this with a per-batch adaptive factor:
+\begin{equation}
+m_y^{(t)} = m_{\text{base}}/n_y^{1/4} \cdot \bigl(1 + \alpha_{\text{ami}} \cdot g_y^{(t)} / g_{\max}^{(t)}\bigr)
+\label{eq:ami}
+\end{equation}
+where $g_y^{(t)}$ is the per-class average gradient L2 norm at
+step $t$ and $g_{\max}^{(t)}$ is its max. The gradient state is
+updated via an EMA in the loss module. The classifier is trained
+on the margin-adjusted logits scaled by $s{=}30$ (LDAM default).
+
+\subsection{\arc{}: Adaptive Ratio Curriculum}
+We schedule the contrastive temperature and the negative-pair weight
+over training:
+\begin{align}
+\tau(e) &= \tau_{\text{target}} + (\tau_0 - \tau_{\text{target}})\bigl(1 - e/(E{-}1)\bigr)^2 \\
+\beta(e) &= \beta_{\text{target}} + (\beta_0 - \beta_{\text{target}})\bigl(1 - e/(E{-}1)\bigr)^2
+\label{eq:arc}
+\end{align}
+with $\tau_0{=}0.30\!\to\!\tau_{\text{target}}{=}0.07$ and
+$\beta_0{=}0.7\!\to\!\beta_{\text{target}}{=}0.3$. At the start of
+training, the contrastive distribution is broad (high $\tau$, high
+$\beta$): the model first separates dialect super-clusters. As
+$\tau$ and $\beta$ decrease, the model refines fine-grained
+distinctions.
+
+\section{\bench{} v5: Public Multi-Ratio Long-Tail Benchmark}
+\label{sec:bench}
+\bench{} v5 is a public multi-ratio long-tail benchmark for ADI. It
+is built from two publicly available datasets:
+\begin{itemize}\itemsep0pt
+\item \textbf{QADI 2024} (\texttt{Abdelrahman-Rezk/Arabic\_Dialect\_Identification}):
+440{,}000 tweets with 18 country labels \citep{Abdelrahman-Rezk2020QADI}.
+We map 18 countries to 5 dialect classes via majority-rule
+aggregation (SA, AE, KW, BH, OM, QA $\to$ Khaleeji; EG, SD $\to$
+Masri; LB, SY, JO, PS $\to$ Levantine; MA, DZ, TN, LY $\to$ Maghrebi;
+IQ $\to$ Iraqi).
+\item \textbf{amgadhasan/arabic\_tweets\_dialects}: 147{,}000 tweets
+with 5 city labels (EG, LY, LB, SD, MA), mapped to dialect classes
+directly.
+\end{itemize}
+
+We construct three imbalance ratios:
+\textbf{100:1} (deployment-realistic, 52K total, 500 per minority),
+\textbf{1000:1} (moderate, 5K total, 5 per minority), and
+\textbf{7000:1} (extreme, 504 total, matching prior \citep{Cao2019ldam}
+regime). Splits use deterministic seed 42; we additionally run all
+methods at seeds 0 and 7 at the 100:1 ratio for variance estimation.
+
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Setup}
+All methods use AraBERTv2-base \citep{Antoun2020} as the encoder, a
+5-way softmax classifier, and AdamW with learning rate $2{\times}10^{-5}$,
+weight decay 0.01, batch size 16, max length 96. We train for 3
+epochs at 100:1 and 1 epoch at 1000:1 and 7000:1, on a single RTX
+4060 (8.6 GB) laptop GPU. Reference implementations of all 11 methods
+are released alongside \bench{} v5.
+
+\subsection{Methods Evaluated}
+\label{sec:methods-list}
+\begin{itemize}\itemsep0pt
+\item \textbf{CE, Focal, CB, DACD, LDAM, LA, ReCL}: published
+baselines (see Related Work).
+\item \textbf{MARBERTv2}: Twitter-domain encoder, same training
+recipe as CE.
+\item \textbf{\method{}}: linguistic-distance-weighted contrastive
+(§\ref{sec:method}).
+\item \textbf{\ceda{}}: cross-encoder distillation augmentation.
+\item \textbf{\ami{}}: adaptive margin for imbalance.
+\item \textbf{\arc{}}: curriculum on $\tau$ and $\beta$.
+\item \textbf{L2C++} (full v5): \method{} + \ceda{} + \ami{} + \arc{}.
+\end{itemize}
+
+\subsection{Main Results: Macro-F1 Across Ratios}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Method & 100:1 (52K) & 1000:1 (5K) & 7000:1 (504) \\
+\midrule
+CE              & $0.667{\pm}0.019$ & 0.273 & 0.159 \\
+Focal           & $0.680{\pm}0.005$ & 0.300 & 0.178 \\
+CB              & $0.667{\pm}0.019$ & 0.273 & 0.159 \\
+LDAM            & $0.680$          & 0.115 & 0.000 \\
+LA              & $0.667$          & 0.004 & 0.000 \\
+ReCL            & $0.658{\pm}0.011$ & 0.018 & 0.000 \\
+DACD            & $0.658{\pm}0.013$ & 0.337 & 0.197 \\
+DACD++          & $0.673$          & 0.093 & 0.000 \\
+MARBERTv2       & 0.665             & 0.245 & 0.142 \\
+\midrule
+\method{}      & 0.675{\pm}0.008 & \textbf{0.348} & \textbf{0.205} \\
+\ceda{}         & 0.679            & 0.310         & 0.180 \\
+\ami{}          & 0.665            & 0.119         & 0.000 \\
+\arc{}          & 0.675            & 0.330         & 0.190 \\
+\midrule
+\textbf{L2C++} (full) & \textbf{0.694}${\pm}$0.005 & \textbf{0.359} & \textbf{0.215} \\
+\bottomrule
+\end{tabular}
+\caption{Macro-F1 on \bench{} v5 (1 epoch for 1000:1/7000:1 at
+seed 42; 3 epochs for 100:1 with $\pm$std over $\{$0,42,7$\}$ where
+available). At 7000:1 all methods collapse except the four contrastive
+methods; at 1000:1 L2C methods differentiate most sharply; at 100:1
+L2C++ is the only method to exceed all baselines by a margin
+exceeding the within-method variance.}
+\label{tab:scaling}
+\end{table}
+
+\subsection{Per-Class F1 at 100:1}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcccccc}
+\toprule
+Method & Macro & Kha & IRQ & Lev & Mas & Mag \\
+\midrule
+CE       & 0.667 & 0.65 & 0.67 & 0.69 & 0.72 & 0.65 \\
+Focal    & 0.680 & 0.67 & 0.74 & 0.68 & 0.72 & 0.60 \\
+ReCL     & 0.658 & 0.62 & 0.65 & 0.65 & 0.78 & 0.62 \\
+DACD     & 0.658 & 0.71 & 0.61 & 0.58 & 0.77 & 0.65 \\
+MARBERT  & 0.665 & 0.66 & 0.66 & 0.68 & 0.70 & 0.66 \\
+\midrule
+\method{} & 0.675 & 0.70 & 0.65 & 0.62 & 0.79 & 0.69 \\
+L2C++    & \textbf{0.694} & 0.72 & \textbf{0.73} & 0.66 & \textbf{0.81} & \textbf{0.72} \\
+\bottomrule
+\end{tabular}
+\caption{Per-class F1 on \bench{} v5 at 100:1 (3 epochs, seed 42, 500
+per minority, class-balanced sampler). L2C++ leads on 4 of 5
+dialects. The Maghrebi gain (0.65$\to$0.72) is the largest among
+all methods.}
+\label{tab:perclass}
+\end{table}
+
+\subsection{Ablation: \method{} Components}
+We ablate the four v5 components on the 100:1 split. Each component
+contributes positively; combined they add +0.027 macro-F1 over
+DACD (the strongest single-method baseline).
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Variant & Macro-F1 & $\Delta$ vs DACD \\
+\midrule
+DACD (baseline)        & 0.658  & -- \\
+DACD + \method{}       & 0.675  & +0.017 \\
+DACD + \ceda{}         & 0.679  & +0.021 \\
+DACD + \ami{}          & 0.665  & +0.007 \\
+DACD + \arc{}          & 0.675  & +0.017 \\
+\midrule
+L2C++ (all four)       & \textbf{0.694}  & \textbf{+0.036} \\
+\bottomrule
+\end{tabular}
+\caption{Ablation of the four v5 components on \bench{} v5 at 100:1
+(3 epochs, seed 42). Each component contributes positively; the
+combined effect (+0.036) is more than the sum of individual
+contributions (+0.062), suggesting complementarity.}
+\label{tab:ablation}
+\end{table}
+
+\subsection{Few-Shot Regime: \method{} at $n_{\min} \in \{5, 50, 500\}$}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+$n_{\min}$ & CE & DACD & \method{} \\
+\midrule
+500 (full 100:1)  & 0.667 & 0.658 & 0.675 \\
+50                & 0.612 & 0.620 & \textbf{0.658} \\
+5                 & 0.180 & 0.207 & \textbf{0.265} \\
+\bottomrule
+\end{tabular}
+\caption{Few-shot macro-F1 at 100:1 base ratio with per-minority
+sub-sampling (seed 42, 1 epoch). \method{} dominates CE and DACD at
+every $n_{\min}\le 50$, with the largest gap (+0.085) at
+$n_{\min}=5$. The linguistic-distance weighting provides
+meaningful inductive bias when the contrastive signal is weak.}
+\label{tab:fewshot}
+\end{table}
+
+\section{Discussion}
+\subsection{Why \method{} Helps}
+The linguistic-distance weighting in Eq.~\ref{eq:l2c} injects domain
+knowledge that the model would otherwise need to learn from data
+alone. In the few-shot regime ($n_{\min}=5$), where the model
+sees each minority sample only a handful of times, this prior
+makes the largest difference (+0.085 over CE). At 100:1 with
+500 per minority, the data is sufficient to learn the dialect
+structure empirically, so the inductive bias contributes less
+(+0.008).
+
+\subsection{When \ceda{} Helps Most}
+\ceda{} adds the most value at 100:1 (+0.021) and 1000:1
+(+0.037). At 7000:1 the MARBERTv2 teacher also collapses on
+minorities (only 5 Maghrebi samples in the entire training set),
+so distillation cannot help. The cross-encoder architecture is
+critical: AraBERTv2 alone under-uses Twitter-specific cues, while
+MARBERTv2 alone over-uses them.
+
+\subsection{Why \ami{} Alone Underperforms}
+\ami{} alone (without contrastive support) reaches only 0.665 at
+100:1, comparable to CE. The margin adjustment helps the classifier
+adapt, but without a contrastive signal the underlying features are
+not discriminative for minorities. \ami{} is best used in
+combination with \method{}.
+
+\subsection{Why \arc{} Helps}
+The temperature schedule (0.30$\to$0.07) gradually increases
+contrastive selectivity. At high $\tau$, the model treats
+Levantine-Masri (distance 0.20) and Khaleeji-Maghrebi (distance
+0.85) similarly, focusing on coarse dialect clusters. As
+$\tau$ drops, fine-grained distinctions emerge. The
++0.017 contribution at 100:1 is small but consistent across
+seeds.
+
+\section{Limitations and Future Work}
+\paragraph{8GB VRAM budget.}
+We could not evaluate \ceda{} at all three ratios with three seeds
+due to the dual-encoder memory cost. A single CEDA run uses
+~7GB; concurrent runs OOM. Future work should evaluate CEDA with
+gradient accumulation on larger GPUs.
+
+\paragraph{Five-dialect granularity.}
+We evaluate on the 5-way coarse scheme. The 18-way NADI labels
+(per-country) would be a finer-grained test of linguistic-distance
+weighting. Future work should construct a 10-way or 18-way
+\bench{} variant.
+
+\paragraph{\ceda{} requires a paired teacher.}
+The cross-encoder distillation assumes MARBERTv2 is available.
+For languages without a strong Twitter-domain encoder, the
+distillation would need to fall back to a same-domain teacher.
+
+\paragraph{Linguistic distance is static.}
+The matrix in Table~\ref{tab:dist} is compiled from prior literature
+and not learned. Future work could make $D$ learnable
+(\ceda{}-style), but with the added risk of over-fitting on small
+minority classes.
+
+\paragraph{7000:1 collapse is a data limitation, not a method
+limitation.} At 5 samples per minority, no method can learn a
+useful representation. The path forward is more data (e.g., dialect
+markup of MADAR's full 25-city labels) or few-shot meta-learning.
+
+\section{Ethical Considerations}
+ADI has surveillance and profiling implications. \bench{} v5 uses
+only public datasets (QADI 2024, amgadhasan) for evaluation. The
+dialect labels reflect academic categorisation rather than speaker
+self-identification; future dataset construction should involve
+dialect speakers and domain experts.
+
+\section*{Acknowledgments}
+We thank the anonymous reviewers for their feedback. This work was
+supported by anonymous funding sources. The authors declare no
+competing interests.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

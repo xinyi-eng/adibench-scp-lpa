@@ -1,0 +1,14 @@
+{
+  "method": "maml",
+  "dataset": "amgadhasan_5",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.19466666666666665,
+  "std": 0.06275171533733383,
+  "ci95": 0.008696944035438858,
+  "train_time_s": 301.9926338195801,
+  "eval_time_s": 72.80440711975098
+}

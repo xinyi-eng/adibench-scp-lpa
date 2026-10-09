@@ -1,0 +1,36 @@
+{
+  "method": "l2c",
+  "best_acc": 0.5396,
+  "history": [
+    {
+      "episode": 100,
+      "loss": 1.1397132873535156,
+      "eval_acc": 0.4888
+    },
+    {
+      "episode": 200,
+      "loss": 1.4394187927246094,
+      "eval_acc": 0.5167333333333334
+    },
+    {
+      "episode": 300,
+      "loss": 1.1069552898406982,
+      "eval_acc": 0.5085333333333333
+    },
+    {
+      "episode": 400,
+      "loss": 1.1861313581466675,
+      "eval_acc": 0.5322
+    },
+    {
+      "episode": 500,
+      "loss": 1.1475187540054321,
+      "eval_acc": 0.5396
+    }
+  ],
+  "n_episodes": 500,
+  "n_way": 5,
+  "k_shot": 5,
+  "q_query": 15,
+  "use_curriculum": false
+}

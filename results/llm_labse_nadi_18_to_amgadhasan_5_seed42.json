@@ -1,0 +1,9 @@
+{
+  "method": "labse",
+  "source": "nadi_18",
+  "target": "amgadhasan_5",
+  "seed": 42,
+  "accuracy": 0.29506666666666664,
+  "std": 0.058260869276804385,
+  "ci95": 0.01141913037825366
+}

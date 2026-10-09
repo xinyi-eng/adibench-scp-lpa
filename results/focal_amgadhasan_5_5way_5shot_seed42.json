@@ -1,0 +1,14 @@
+{
+  "method": "focal",
+  "dataset": "amgadhasan_5",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.18893333333333334,
+  "std": 0.0629512686307609,
+  "ci95": 0.008724600710888977,
+  "train_time_s": 265.6764543056488,
+  "eval_time_s": 78.58643174171448
+}

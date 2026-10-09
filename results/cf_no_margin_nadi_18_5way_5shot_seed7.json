@@ -1,0 +1,14 @@
+{
+  "method": "cf_no_margin",
+  "dataset": "nadi_18",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 7,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.5571333333333334,
+  "std": 0.09553477551830711,
+  "ci95": 0.013240444371193386,
+  "train_time_s": 244.62628388404846,
+  "eval_time_s": 83.12315940856934
+}

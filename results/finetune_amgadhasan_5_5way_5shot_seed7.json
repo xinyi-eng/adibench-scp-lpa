@@ -1,0 +1,14 @@
+{
+  "method": "finetune",
+  "dataset": "amgadhasan_5",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 7,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.19653333333333334,
+  "std": 0.04910288518339155,
+  "ci95": 0.00680531268544412,
+  "train_time_s": 246.2336826324463,
+  "eval_time_s": 66.1819200515747
+}

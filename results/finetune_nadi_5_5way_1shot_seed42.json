@@ -1,0 +1,14 @@
+{
+  "method": "finetune",
+  "dataset": "nadi_5",
+  "n_way": 5,
+  "k_shot": 1,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.199,
+  "std": 0.03567601123693311,
+  "ci95": 0.004944442896379284,
+  "train_time_s": 227.78974509239197,
+  "eval_time_s": 84.74255037307739
+}

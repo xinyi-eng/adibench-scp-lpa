@@ -1,0 +1,22 @@
+{
+  "method": "l2c",
+  "ratio": "7000_1",
+  "seed": 42,
+  "epochs": 1,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 0.4081124514669574,
+      "macro_f1": 1.0,
+      "f1_Khaleji": 1.0,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0,
+      "elapsed_s": 5.55761456489563,
+      "n_train": 454,
+      "n_val": 50
+    }
+  ],
+  "total_time_s": 5.559148788452148
+}

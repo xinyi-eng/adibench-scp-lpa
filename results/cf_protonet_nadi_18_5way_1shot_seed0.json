@@ -1,0 +1,14 @@
+{
+  "method": "cf_protonet",
+  "dataset": "nadi_18",
+  "n_way": 5,
+  "k_shot": 1,
+  "seed": 0,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.42333333333333334,
+  "std": 0.1248198702130394,
+  "ci95": 0.017299151424275124,
+  "train_time_s": 223.16446018218994,
+  "eval_time_s": 91.34706711769104
+}

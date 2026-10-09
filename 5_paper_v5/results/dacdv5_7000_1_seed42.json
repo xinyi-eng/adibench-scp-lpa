@@ -1,0 +1,22 @@
+{
+  "method": "dacdv5",
+  "ratio": "7000_1",
+  "seed": 42,
+  "epochs": 1,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 8.31758960188748,
+      "macro_f1": 0.32653061224489793,
+      "f1_Khaleji": 0.9795918367346939,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0,
+      "elapsed_s": 5.454768180847168,
+      "n_train": 454,
+      "n_val": 50
+    }
+  ],
+  "total_time_s": 5.457409620285034
+}

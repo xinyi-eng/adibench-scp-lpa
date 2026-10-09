@@ -1,0 +1,14 @@
+{
+  "method": "scp_lpa",
+  "dataset": "amgadhasan_5",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.7850666666666667,
+  "std": 0.04715101035797407,
+  "ci95": 0.006534796636128439,
+  "train_time_s": 491.0762448310852,
+  "eval_time_s": 171.76951503753662
+}

@@ -1,0 +1,14 @@
+{
+  "method": "relationnet",
+  "dataset": "nadi_18",
+  "n_way": 5,
+  "k_shot": 1,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.3546,
+  "std": 0.09496757341324459,
+  "ci95": 0.01316183417005396,
+  "train_time_s": 245.62538385391235,
+  "eval_time_s": 77.08958745002747
+}

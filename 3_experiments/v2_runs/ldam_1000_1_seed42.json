@@ -1,0 +1,23 @@
+{
+  "method": "ldam",
+  "ratio": "1000_1",
+  "seed": 42,
+  "epochs": 1,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 0.2145209452055735,
+      "macro_f1": 0.11452991452991453,
+      "f1_Khaleji": 0.5726495726495726,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0,
+      "elapsed_s": 53.217793703079224,
+      "n_train": 4518,
+      "n_val": 502
+    }
+  ],
+  "imbalance": 10001.0,
+  "total_time_s": 53.22079610824585
+}

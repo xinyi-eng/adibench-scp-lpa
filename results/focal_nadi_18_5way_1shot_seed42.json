@@ -1,0 +1,14 @@
+{
+  "method": "focal",
+  "dataset": "nadi_18",
+  "n_way": 5,
+  "k_shot": 1,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.1998,
+  "std": 0.03994390511148798,
+  "ci95": 0.005535942809595408,
+  "train_time_s": 207.8678183555603,
+  "eval_time_s": 82.10410284996033
+}

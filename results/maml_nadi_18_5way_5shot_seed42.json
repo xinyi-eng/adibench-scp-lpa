@@ -1,0 +1,14 @@
+{
+  "method": "maml",
+  "dataset": "nadi_18",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.2,
+  "std": 0.0,
+  "ci95": 0.0,
+  "train_time_s": 324.529415845871,
+  "eval_time_s": 100.53629112243652
+}

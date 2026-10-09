@@ -1,0 +1,14 @@
+{
+  "method": "softanchor",
+  "dataset": "amgadhasan_5",
+  "n_way": 5,
+  "k_shot": 5,
+  "seed": 42,
+  "n_episodes": 500,
+  "n_eval": 200,
+  "accuracy": 0.7552666666666666,
+  "std": 0.051257909958691575,
+  "ci95": 0.007103983881363094,
+  "train_time_s": 432.21278643608093,
+  "eval_time_s": 127.15949940681458
+}

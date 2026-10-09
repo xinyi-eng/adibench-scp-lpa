@@ -1,0 +1,36 @@
+{
+  "method": "protonet",
+  "best_acc": 0.3948,
+  "history": [
+    {
+      "episode": 100,
+      "loss": 1.3864169120788574,
+      "eval_acc": 0.3725333333333333
+    },
+    {
+      "episode": 200,
+      "loss": 1.411734700202942,
+      "eval_acc": 0.38693333333333335
+    },
+    {
+      "episode": 300,
+      "loss": 1.3495901823043823,
+      "eval_acc": 0.37833333333333335
+    },
+    {
+      "episode": 400,
+      "loss": 1.3095009326934814,
+      "eval_acc": 0.3948
+    },
+    {
+      "episode": 500,
+      "loss": 1.563027262687683,
+      "eval_acc": 0.3862
+    }
+  ],
+  "n_episodes": 500,
+  "n_way": 5,
+  "k_shot": 1,
+  "q_query": 15,
+  "use_curriculum": false
+}

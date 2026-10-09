@@ -1,0 +1,96 @@
+== method=ce seed=42 curriculum=False ==
+device=cuda
+train: 52000  val: 500
+  num_classes (inferred from data): 5
+2026-07-23 20:20:36.176175: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-07-23 20:20:40.393093: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+epoch 1/1 loss=0.2359 macro_f1=0.6775 elapsed=1166.4s
+ce       100_1    best_F1=0.6775  time=1180s
+== method=ce seed=42 curriculum=False ==
+device=cuda
+train: 5020  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.0725 macro_f1=0.2735 elapsed=95.7s
+ce       1000_1   best_F1=0.2735  time=104s
+== method=ce seed=42 curriculum=False ==
+device=cuda
+train: 504  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.1982 macro_f1=0.1592 elapsed=11.8s
+ce       7000_1   best_F1=0.1592  time=20s
+== method=focal seed=42 curriculum=False ==
+device=cuda
+train: 52000  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.1211 macro_f1=0.6847 elapsed=1278.3s
+focal    100_1    best_F1=0.6847  time=1287s
+== method=focal seed=42 curriculum=False ==
+device=cuda
+train: 5020  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.0383 macro_f1=0.3002 elapsed=144.2s
+focal    1000_1   best_F1=0.3002  time=150s
+== method=focal seed=42 curriculum=False ==
+device=cuda
+train: 504  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.0865 macro_f1=0.1782 elapsed=8.7s
+focal    7000_1   best_F1=0.1782  time=15s
+== method=cb seed=42 curriculum=False ==
+device=cuda
+train: 52000  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.2359 macro_f1=0.6775 elapsed=1245.2s
+cb       100_1    best_F1=0.6775  time=1250s
+== method=cb seed=42 curriculum=False ==
+device=cuda
+train: 5020  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.0725 macro_f1=0.2735 elapsed=66.8s
+cb       1000_1   best_F1=0.2735  time=70s
+== method=cb seed=42 curriculum=False ==
+device=cuda
+train: 504  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.1982 macro_f1=0.1592 elapsed=7.6s
+cb       7000_1   best_F1=0.1592  time=10s
+== method=dacd seed=42 curriculum=False ==
+device=cuda
+train: 52000  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.7088 macro_f1=0.6554 elapsed=713.2s
+dacd     100_1    best_F1=0.6554  time=716s
+== method=dacd seed=42 curriculum=False ==
+device=cuda
+train: 5020  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.5787 macro_f1=0.3366 elapsed=68.0s
+dacd     1000_1   best_F1=0.3366  time=72s
+== method=dacd seed=42 curriculum=False ==
+device=cuda
+train: 504  val: 500
+  num_classes (inferred from data): 5
+epoch 1/1 loss=0.5919 macro_f1=0.1970 elapsed=6.5s
+dacd     7000_1   best_F1=0.1970  time=9s
+
+=== C: Imbalance scaling summary (1 epoch, seed=42) ===
+
+Ratio 100_1:1
+  ce      : 0.6774975879181094
+  focal   : 0.684731819035691
+  cb      : 0.6774975879181094
+  dacd    : 0.6553680977910321
+
+Ratio 1000_1:1
+  ce      : 0.2735221876903094
+  focal   : 0.300229617546692
+  cb      : 0.2735221876903094
+  dacd    : 0.33657228163915814
+
+Ratio 7000_1:1
+  ce      : 0.15921040322221008
+  focal   : 0.17823429274632646
+  cb      : 0.15921040322221008
+  dacd    : 0.19695367665334293
+
+Total time: 81.4 min

@@ -1,0 +1,118 @@
+{
+  "method": "dacdpp",
+  "seed": 42,
+  "curriculum": false,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 0.3112715787508271,
+      "elapsed_s": 9.408420324325562,
+      "macro_f1": 0.0120679931689106,
+      "f1_Khaleji": 0.0,
+      "f1_Iraqi": 0.01834862385321101,
+      "f1_Levantine": 0.023809523809523808,
+      "f1_Masri": 0.01818181818181818,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 1,
+      "train_loss": 0.015954631465402516,
+      "elapsed_s": 9.045524597167969,
+      "macro_f1": 0.008876073465805805,
+      "f1_Khaleji": 0.006644518272425249,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.03773584905660377,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.00896922573023899,
+      "elapsed_s": 10.387545824050903,
+      "macro_f1": 0.09342745704799664,
+      "f1_Khaleji": 0.4177545691906005,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.04938271604938271,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.005506018716418607,
+      "elapsed_s": 10.34900975227356,
+      "macro_f1": 0.1599140708915145,
+      "f1_Khaleji": 0.746938775510204,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.05263157894736842,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.0032293267454347246,
+      "elapsed_s": 11.586836814880371,
+      "macro_f1": 0.1728937728937729,
+      "f1_Khaleji": 0.8644688644688645,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.0024390028435857846,
+      "elapsed_s": 12.77229905128479,
+      "macro_f1": 0.18130511463844795,
+      "f1_Khaleji": 0.9065255731922398,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.0016972143157663476,
+      "elapsed_s": 14.649467468261719,
+      "macro_f1": 0.18775510204081633,
+      "f1_Khaleji": 0.9387755102040817,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.0010545453500431998,
+      "elapsed_s": 17.359883546829224,
+      "macro_f1": 0.18815566835871406,
+      "f1_Khaleji": 0.9407783417935702,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.0008486579682575176,
+      "elapsed_s": 20.787433385849,
+      "macro_f1": 0.1885135135135135,
+      "f1_Khaleji": 0.9425675675675675,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.0006517200566701252,
+      "elapsed_s": 22.573915481567383,
+      "macro_f1": 0.18964941569282137,
+      "f1_Khaleji": 0.9482470784641068,
+      "f1_Iraqi": 0.0,
+      "f1_Levantine": 0.0,
+      "f1_Masri": 0.0,
+      "f1_Maghrebi": 0.0
+    }
+  ],
+  "imbalance": 150.0
+}

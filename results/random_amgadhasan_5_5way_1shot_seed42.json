@@ -1,0 +1,14 @@
+{
+  "method": "random",
+  "dataset": "amgadhasan_5",
+  "n_way": 5,
+  "k_shot": 1,
+  "seed": 42,
+  "n_episodes": 0,
+  "n_eval": 200,
+  "accuracy": 0.19366666666666665,
+  "std": 0.043816536705779126,
+  "ci95": 0.006072662165622075,
+  "train_time_s": null,
+  "eval_time_s": 6.168501377105713
+}

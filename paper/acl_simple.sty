@@ -1,0 +1,16 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{acl_simple}[2026/01/01 Local ACL stub]
+\newif\ifacl@review
+\DeclareOption{review}{\acl@reviewtrue}
+\DeclareOption{final}{\acl@reviewfalse}
+\ProcessOptions\relax
+\RequirePackage[utf8]{inputenc}
+\RequirePackage{times}
+\RequirePackage[T1]{fontenc}
+\RequirePackage[margin=2cm]{geometry}
+\RequirePackage{natbib}
+\RequirePackage{xcolor}
+\RequirePackage{lineno}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\providecommand{\BibTeX}{B\kern-.05em\lower.5ex\hbox{I}\kern-.1em B\kern-.08em T\kern-.17em X}

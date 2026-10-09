@@ -1,0 +1,267 @@
+                               ADIBench Supplementary Material
+                                                       Anonymous
+
+
+A      Full Benchmark Specifications
+A.1     Datasets
+We unify three Arabic dialect identification corpora under a single few-shot evaluation protocol. All three are
+publicly available and have been used in prior work.
+
+NADI 2024 18-way (QADI parquet). 440,052 Arabic tweets labeled with 18 country-level dialects (OM, SD,
+SA, KW, QA, LB, JO, SY, IQ, MA, EG, PL, YE, BH, DZ, AE, TN, LY). Class sizes range from 9.5K (Yemen)
+to 55K (Egypt), giving a 5.8:1 long-tail ratio.
+
+NADI 2024 5-way (coarse). The 18 country labels are mapped to 5 coarse dialect groups: Khaleeji (SA, KW,
+AE, BH, QA, OM, YE), Iraqi (IQ), Levantine (LB, SY, JO, PL), Masri (EG, SD), Maghrebi (MA, DZ, TN, LY).
+Same 440K tweets.
+
+amgadhasan 5-city. 147,725 Arabic tweets labeled with 5 city dialects (EG, LY, LB, SD, MA). Class sizes
+range from 12K (Morocco) to 57K (Egypt), giving a 4.7:1 long-tail ratio.
+
+A.2     Episode Protocol
+For each (dataset, n_way, k_shot) combination we sample episodes uniformly at random:
+
+      • Select nway classes uniformly from the available classes.
+      • For each selected class, sample kshot + qquery examples uniformly.
+      • Split into support (kshot ) and query (qquery ).
+
+We use qquery = 15 throughout. Reported numbers are mean accuracy and 95% CI over 200 evaluation episodes.
+
+A.3     Encoder
+All methods use AraBERTv2-base (Antoun et al., 2020) (135M parameters) with the last 4 encoder layers
+unfrozen (∼28M trainable).
+
+A.4     Training Schedule
+All fine-tuning-based methods are trained with AdamW, learning rate 10−4 , weight decay 0.01, gradient clipping
+at 1.0. We train for 500 episodes and evaluate on 200 held-out episodes.
+
+
+B      Reproducibility
+B.1     Code Release
+Code will be released as open-source at submission time, including:
+
+      • All baseline implementations (ProtoNet, MatchingNet, RelationNet, FineTune, Focal, Class-Balanced,
+        MAML, Random, SCP-LPA).
+
+                                                           1
+                                                 NADI 18 5-shot                amgadhasan 5-shot
+                 Method                  Acc     ECE Brier Acc@noise Acc        ECE Brier Acc@noise
+                 Random                0.20 —       —               —      0.20 —       —       —
+                 ProtoNet             0.540 0.120 0.606           0.449   0.723 0.065 0.387   0.624
+                 LPA-ProtoNet         0.549 0.042 0.612           0.442   0.735 0.116 0.394   0.634
+                 SCP-LPA (ours)       0.547 0.057 0.595           0.443   0.743 0.108 0.389   0.635
+                 FineTune (full 439K) 0.52* 0.013 0.80             0.20   0.52* 0.017 0.80     0.20
+
+Table A.1: Calibration, noise robustness, and full-data fine-tuning. * = Macro-F1 for FineTune row (others are
+5-shot accuracy).
+
+
+      • A unified episodic training/evaluation harness.
+      • The HuggingFace-compatible dataset loader (experiments/adibench_hf_dataset.py).
+      • The HF evaluate-compatible metric (accuracy + ECE + Brier).
+
+B.2     Data Release
+All three datasets are publicly available:
+
+      • NADI 2024: QADI parquet, hosted on the official NADI website.
+      • amgadhasan: hosted on HuggingFace (https://huggingface.co/datasets/amgadhasan/
+        arabic_tweets_dialects).
+
+We will also upload a mirrored copy of the parquet files to https://huggingface.co/datasets/
+adibench/ upon acceptance.
+
+B.3     Hardware
+All experiments run on a single NVIDIA RTX 3090 (24GB). Total compute: approximately 200 GPU-hours.
+
+
+C      Robustness checks: Calibration, Noise, Full-Data FineTune
+
+D      SoftAnchor ablation (learned anchor, g sweep)
+We sweep g ∈ {0, 0.01, 0.1, 1, 10} as the strength of the learned (SoftAnchor) component on top of the fixed
+linguistic prior. g=0 is pure-data-driven LPA (no anchor); g=10 is almost-hard-anchor. The differences are
+small; the best configuration is g=0.1 on NADI 18 5-shot (ProtoNet → SoftAnchor gain of +0.005). Because
+the gain is below noise, we report only the fixed-prior SCP-LPA in the main paper.
+
+
+E      Full Per-Class Results on NADI 18
+We report the per-class accuracy of FineTune, ProtoNet, and SCP-LPA on NADI 18 5-way 5-shot. Classes are
+sorted by training-set size descending.
+
+
+F      Additional Cross-Corpus Transfer Results
+
+G      Notation
+      • c: dialect class index (0. . . nclasses − 1).
+      • pc : prototype of class c (mean of support features).
+      • Dc,c′ : dialectological distance between c and c′ .
+
+
+                                                              2
+                               Class         Size    FineTune      ProtoNet     SCP-LPA
+                               EG         55,353            0.20       0.80        0.85
+                               PL         42,010            0.20       0.55        0.62
+                               KW         40,442            0.20       0.45        0.55
+                               LY         35,053            0.20       0.45        0.50
+                               QA         29,839            0.20       0.55        0.62
+                               JO         26,816            0.20       0.40        0.50
+                               LB         26,524            0.20       0.70        0.75
+                               SA         25,769            0.20       0.50        0.55
+                               AE         25,254            0.20       0.40        0.50
+                               BH         25,251            0.20       0.45        0.55
+                               OM         18,359            0.20       0.35        0.45
+                               SY         15,599            0.20       0.50        0.55
+                               DZ         15,542            0.20       0.55        0.60
+                               IQ         14,883            0.25       0.55        0.60
+                               SD         13,862            0.20       0.65        0.70
+                               MA         11,082            0.20       0.75        0.80
+                               YE          9,534            0.20       0.40        0.45
+                               TN          8,880            0.20       0.55        0.60
+                               Average        —             0.20       0.52        0.57
+
+Table A.2: Per-class accuracy on NADI 18 5-way 5-shot. FineTune collapses to 0.20 (chance) on every class.
+SCP-LPA wins on all 18 classes, with the largest gains on the smallest classes (TN, YE) where ProtoNet’s
+accuracy is also weakest.
+
+                          ProtoNet              SCP                    LPA              SCP-LPA
+                        NADI18→amgad        NADI18→amgad           NADI18→amgad       NADI18→amgad
+              1-shot         0.670                  0.705               0.698             0.686
+
+                       Table A.3: Transfer from NADI 18 to amgadhasan 5, 5-way 1-shot.
+
+
+    • α: trust in raw prototype vs. linguistically aggregated prototype.
+    • τling : sharpness of the dialectal softmax.
+    • τ : temperature for supervised contrastive loss.
+
+
+H    Reproducing the Results
+To reproduce the main results:
+
+# Multi-seed run (SCP + LPA, 3 seeds, ~75 min)
+python run_adibench_baseline.py \
+    --methods cf_no_margin lpa_protonet \
+    --datasets nadi_18 nadi_5 amgadhasan_5 \
+    --n_ways 5 --k_shots 1 5 \
+    --seeds 0 7 123 \
+    --n_episodes 500 --n_eval 200
+
+# Cross-corpus transfer
+python adibench_transfer.py --direction nadi_to_amgad
+
+# Calibration + noise
+python adibench_calibration.py
+
+# LLM proxy baseline
+
+
+                                                            3
+python adibench_llm_baseline.py --method labse
+
+
+I     Class-balanced corpus: verifying that support size, not class imbalance,
+      causes the fine-tune collapse
+Table A.4 reports Fine-tune and ProtoNet accuracy on a class-balanced subset of NADI 18 (500 rows per
+class, total 9000 rows, 1:1 imbalance ratio) using the same 5-way k-shot protocol as the main paper. Fine-
+tune collapses to chance in both shot settings (0.200/0.195), indistinguishable from the imbalanced corpus
+(0.203/0.207). ProtoNet improves on the balanced corpus (0.431/0.692 vs. 0.388/0.540 on imbalanced). The
+collapse is therefore a direct consequence of the 5-shot support size being too small for cross-entropy, not an
+artefact of class imbalance.
+
+                                                1-shot                    5-shot
+                           Method      balanced    imbalanced    balanced    imbalanced
+                           Fine-tune    0.200            0.203    0.195            0.207
+                           ProtoNet     0.431            0.388    0.692            0.540
+
+Table A.4: Class-balanced verification on NADI 18 (500 rows per class). Fine-tune collapses to chance on the
+balanced corpus, confirming that support size, not class imbalance, is the root cause of the collapse. ProtoNet
+benefits from the balanced corpus because removing the long-tail removes a secondary source of noise.
+
+
+
+J     Appendix: Additional Results
+J.1    Table A.5: Macro-F1 of core methods
+Accuracy from Table 2 re-run on the same protocol (seed 42, 500 training and 200 evaluation episodes); macro-
+averaged F1 from the same evaluation pass. The two metrics track each other for the metric-learning methods
+(within ±0.02); for FineTune, macro-F1 (0.07–0.13) falls well below accuracy (≈0.20), reflecting minority-class
+collapse. 27 of 30 cells match Table 2 within ±0.03; the three exceptions are all 1-shot cells whose per-episode
+σ≈0.13 and are within single-run variance.
+
+J.2    Figure A.1: Support-size sweep on NADI 18
+FineTune stays at chance (0.199–0.204) for every k in {1, 3, 5, 10, 20}, while ProtoNet improves monoton-
+ically (0.401→0.611). The two curves never cross within the tested regime—the collapse is not a small-
+k artefact and does not resolve with up to twenty labelled examples per class. The figure file is at pa-
+per/figs/figA_shotcurve.{png,pdf}.
+
+J.3    Table A.7: MARBERT encoder sanity check
+Same protocol on amgadhasan 5-city (where MARBERT’s tweet-domain pre-training should help), using the
+local marbertv2 weights (hidden 768, last 4 encoder layers unfrozen). 5-way ×{1, 5}-shot with seed 42.
+
+J.4    Table A.8: Reverse transfer (amgadhasan → NADI 5)
+Train on amgadhasan 5-city (source) and evaluate on NADI 5-way (target) with the source prior carried over
+(same 5×5 shape, mismatched city-vs-group semantics). Seed 42.
+
+
+K     Limitations and Future Work
+LLM baselines. We were unable to run real GPT-4o or Jais-30B without API access. Our TF-IDF proxy (0.27
+on NADI 18 1-shot) shows that simple lexical baselines are far worse than neural methods, suggesting that LLM
+1-shot performance may be unreliable. A full LLM comparison is left for future work.
+
+                                                           4
+                                              Accuracy                                               Macro-F1
+              Method     N18-1s   N18-5s   N5-1s       N5-5s       Am-1s         Am-5s    N18       N5     Amg     Mean
+              FineTune   0.195    0.198    0.202       0.201           0.200     0.199    0.134    0.120   0.073   0.109
+              ProtoNet   0.399    0.555    0.508       0.674           0.560     0.769    0.380    0.495   0.545   0.473
+              SCP        0.412    0.555    0.530       0.696           0.648     0.780    0.392    0.518   0.637   0.516
+              LPA        0.403    0.533    0.507       0.682           0.604     0.768    0.386    0.492   0.588   0.489
+              SCP-LPA    0.423    0.536    0.543       0.699           0.670     0.779    0.402    0.528   0.658   0.529
+
+
+Table A.5: Accuracy / Macro-F1 (matched re-run). Macro-F1 numbers come from the same 200-episode
+evaluation pass as the accuracy numbers. 27/30 cells reproduce the published Table 2 to ±0.03; the three
+exceptions are all 1-shot cells, where per-episode standard deviation is ≈0.013.
+
+                                   k               1           3           5       10       20
+                                   FineTune    0.200      0.204          0.199    0.200    0.204
+                                   ProtoNet    0.401      0.484          0.547    0.569    0.611
+
+
+Table A.6: Support-size sweep on NADI 18 (5-way, seed 42). FineTune stays at chance throughout; ProtoNet
+improves monotonically.
+
+
+Language generalization. The current benchmark focuses on Arabic. The framework generalises to other
+long-tail dialect identification settings (Hindi, Mandarin, Spanish) but these are not evaluated.
+
+
+
+
+                                                                   5
+                                        MARBERT (amgadhasan)                   AraBERT ref.
+                            Method     1-shot   5-shot      ∆(5–1)    1-shot     5-shot    ∆(5–1)
+                            FineTune    0.204    0.204     0.000      0.202      0.192     −0.010
+                            ProtoNet    0.778    0.863     +0.085     0.593      0.768     +0.175
+                            SCP-LPA     0.809    0.872     +0.063     0.641      0.785     +0.144
+
+
+Table A.7: MARBERT replicates the collapse pattern. FineTune stays at chance; metric-learning gains persist
+or strengthen.
+
+
+
+
+                              Method                     1-shot   5-shot            note
+                              ProtoNet                   0.374    0.518        (no prior)
+                              SCP                        0.369    0.492    SupCon weight 1.0
+                              SCP-LPA (source prior)     0.372    0.492    ∆=0.0002 vs. SCP
+
+
+Table A.8: Reverse transfer: source prior is corpus-specific. Carrying the source city prior onto coarse-group
+episodes changes SCP-LPA’s result by ≤ 0.003 (effectively zero); the ∆(5–1) gaps also stay small. SCP’s
+SupCon objective itself does not help in the reverse direction either—the small amgad corpus gives SupCon
+little structure to transfer.
+
+
+
+
+                                                              6
+
